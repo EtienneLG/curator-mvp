@@ -1,0 +1,8 @@
+import { setupServer } from 'msw/node';
+import { handlers } from './handlers';
+
+/**
+ * MSW server for Vitest — mocks `apps/api` at the network level (never
+ * mock modules). Lifecycle is wired in `src/test/setup.ts`.
+ */
+export const server = setupServer(...handlers);
