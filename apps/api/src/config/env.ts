@@ -5,6 +5,8 @@ const envSchema = z.object({
   DATABASE_URL: z.string().min(1, 'DATABASE_URL is required'),
   PORT: z.coerce.number().int().positive().default(3000),
   NODE_ENV: z.enum(['development', 'test', 'production']).default('development'),
+  // Origin of the web app allowed to call this API via CORS (see plugins/cors.plugin.ts).
+  WEB_ORIGIN: z.string().min(1).default('http://localhost:5173'),
 });
 
 export type Env = z.infer<typeof envSchema>;

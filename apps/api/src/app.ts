@@ -3,6 +3,7 @@ import { serializerCompiler, validatorCompiler } from 'fastify-type-provider-zod
 
 import type { Env } from './config/env.js';
 import { createLogger } from './lib/logger.js';
+import { corsPlugin } from './plugins/cors.plugin.js';
 import { errorHandlerPlugin } from './plugins/error-handler.plugin.js';
 import { requestIdPlugin } from './plugins/request-id.plugin.js';
 import { swaggerPlugin } from './plugins/swagger.plugin.js';
@@ -21,6 +22,7 @@ export async function buildApp(env: Env) {
 
   await app.register(requestIdPlugin);
   await app.register(errorHandlerPlugin);
+  await app.register(corsPlugin(env));
   await app.register(swaggerPlugin);
   await app.register(healthRoute);
   await app.register(itemsRoute);
