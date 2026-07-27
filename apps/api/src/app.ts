@@ -1,4 +1,5 @@
 import fastify from 'fastify';
+import { serializerCompiler, validatorCompiler } from 'fastify-type-provider-zod';
 
 import type { Env } from './config/env.js';
 import { createLogger } from './lib/logger.js';
@@ -12,6 +13,11 @@ import { itemsRoute } from './routes/items.route.js';
 // Kept separate from server.ts so tests can `app.inject()` without binding a port.
 export async function buildApp(env: Env) {
   const app = fastify({ loggerInstance: createLogger(env) });
+
+  // Lets route `schema` options accept Zod schemas directly (body/response/params/query),
+  // with validation, serialization and static type inference handled by the type provider.
+  app.setValidatorCompiler(validatorCompiler);
+  app.setSerializerCompiler(serializerCompiler);
 
   await app.register(requestIdPlugin);
   await app.register(errorHandlerPlugin);

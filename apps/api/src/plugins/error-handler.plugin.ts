@@ -1,11 +1,14 @@
 import type { FastifyPluginAsync } from 'fastify';
+import { hasZodFastifySchemaValidationErrors } from 'fastify-type-provider-zod';
 import { ZodError } from 'zod';
 
 import { AppError } from '../lib/errors.js';
 
-// Centralized error mapping: services throw typed AppError subclasses (or Zod validation
-// errors surface from route schema parsing); everything else is an unexpected 500.
-// Response shape is always `{ error: { code, message, details } }` — stack traces never leak.
+// Centralized error mapping: services throw typed AppError subclasses; request validation
+// errors come from Fastify's Zod-backed validator compiler (route `schema.body`, see
+// fastify-type-provider-zod) or, in code paths that still call `.parse()` directly, a raw
+// `ZodError`. Everything else is an unexpected 500. Response shape is always
+// `{ error: { code, message, details } }` — stack traces never leak.
 //
 // `setErrorHandler` only applies to the encapsulation context it's registered in (and its
 // children) by default. Setting the `skip-override` symbol (the same mechanism the
@@ -17,6 +20,14 @@ export const errorHandlerPlugin: FastifyPluginAsync = async (app) => {
       request.log.warn({ err: error, code: error.code }, 'handled business error');
       reply.status(error.statusCode).send({
         error: { code: error.code, message: error.message, details: error.details },
+      });
+      return;
+    }
+
+    if (hasZodFastifySchemaValidationErrors(error)) {
+      request.log.warn({ err: error }, 'validation error');
+      reply.status(400).send({
+        error: { code: 'VALIDATION_ERROR', message: 'Invalid request', details: error.validation },
       });
       return;
     }
