@@ -133,9 +133,15 @@ prisma/
 ```
 
 ### Fastify Rules
-- `*.route.ts` registers endpoints and attaches Zod schemas.
+- `*.route.ts` registers endpoints and attaches Zod schemas directly to `schema: { body,
+  response, params, querystring }` via `fastify-type-provider-zod` (see DEC-014) —
+  `app.withTypeProvider<ZodTypeProvider>()`. Fastify validates/serializes; handlers never call
+  `.parse()` themselves.
 - `*.handler.ts` receives `(request, reply)` and delegates immediately — keep handlers boring.
-- Plugins export `FastifyPluginAsync` and are registered explicitly in `app.ts`.
+- Plugins export `FastifyPluginAsync` and are registered explicitly in `app.ts`. Any plugin whose
+  hooks (e.g. `onRoute`, `onError`) must apply repo-wide (not just to its own encapsulated
+  children) sets the `Symbol.for('skip-override')` flag to hoist to the root context — see
+  `error-handler.plugin.ts` and `swagger.plugin.ts`.
 - Hooks: `onRequest` for request/correlation IDs; `onError` for centralized mapping.
 
 ### Validation & Errors
@@ -152,7 +158,9 @@ prisma/
 
 ### Logging & Docs
 - **Pino** only — never `console.log`. Structured objects, never log raw PII.
-- `@fastify/swagger` for API docs; keep OpenAPI close to Zod schemas via `.describe()`.
+- `@fastify/swagger` for API docs, transformed via `fastify-type-provider-zod`'s
+  `jsonSchemaTransform` so the OpenAPI spec is generated directly from route Zod schemas
+  (see DEC-014); use `.describe()` on schema fields for extra OpenAPI detail.
 
 ### Async
 - `async`/`await` only; `Promise.all` for independent calls. No `setTimeout` for core flow.

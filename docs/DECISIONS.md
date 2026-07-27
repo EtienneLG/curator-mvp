@@ -123,6 +123,28 @@ SDKs, and multi-environment deploy pipelines.
 **Do not:** Add code paths, dependencies, or schema fields for these without an explicit new
 decision recorded here.
 
+## DEC-014 — Fastify Route Validation: `fastify-type-provider-zod`
+**Status:** Accepted
+**Date:** 2026-07-27
+**Decision:** Added `fastify-type-provider-zod` (pinned `^5.x` — required for `zod@^4.2+`
+support) as the bridge between Zod schemas and Fastify. Routes attach Zod schemas directly to
+`schema: { body, response, params, querystring }` via `app.withTypeProvider<ZodTypeProvider>()`,
+with `setValidatorCompiler`/`setSerializerCompiler` wired once in `app.ts`. `@fastify/swagger`
+uses the package's `jsonSchemaTransform` so the OpenAPI spec is generated from the same Zod
+schemas. Handlers no longer call `.parse()` directly — invalid requests never reach them.
+**Why:** DEC-005 already mandates Zod at every API boundary. Previously, `items.route.ts`
+validated the body manually inside the handler because no Zod↔Fastify bridge was installed; this
+meant `@fastify/swagger` (already a dependency) couldn't document request/response shapes, and
+every route would repeat the same manual-parse boilerplate. `fastify-type-provider-zod` is the
+standard, officially-recommended way to use Zod with Fastify's native schema/validation/OpenAPI
+pipeline, keeping routes thin per DEC-003 and the error envelope unchanged per DEC-009 (the
+centralized error handler maps both `ZodError` and the package's Fastify-native validation
+errors to the same `{ error: { code: 'VALIDATION_ERROR', ... } }` shape).
+**Do not:** Call `Schema.parse(request.body)` manually inside handlers/routes for HTTP-boundary
+validation going forward — attach the schema to the route instead. Do not downgrade to
+`fastify-type-provider-zod@^4` (Zod v3 only) or bypass the type provider's validator/serializer
+compilers.
+
 ---
 
 ## Working Defaults
