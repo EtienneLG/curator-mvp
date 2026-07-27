@@ -1,0 +1,71 @@
+import { describe, expect, it, vi } from 'vitest';
+
+import type { ItemsRepository } from '../../src/repositories/items.repository.js';
+import { ItemsService } from '../../src/services/items.service.js';
+
+function buildRepository() {
+  const create = vi.fn(async (data) => ({
+    id: 'item-1',
+    category: null,
+    createdAt: new Date('2026-07-27T00:00:00.000Z'),
+    ...data,
+  }));
+  return { create, asItemsRepository: { create } as unknown as ItemsRepository };
+}
+
+describe('ItemsService', () => {
+  it('captures a text item with type TEXT and no url', async () => {
+    const { create, asItemsRepository } = buildRepository();
+    const service = new ItemsService(asItemsRepository);
+
+    const item = await service.capture({ content: 'just a plain note' });
+
+    expect(item.type).toBe('TEXT');
+    expect(item.url).toBeNull();
+    expect(create).toHaveBeenCalledWith({
+      content: 'just a plain note',
+      type: 'TEXT',
+      url: null,
+      title: null,
+      status: 'INBOX',
+    });
+  });
+
+  it('captures a link item with type LINK and the raw url', async () => {
+    const { create, asItemsRepository } = buildRepository();
+    const service = new ItemsService(asItemsRepository);
+
+    const item = await service.capture({ content: 'https://example.com/article' });
+
+    expect(item.type).toBe('LINK');
+    expect(item.url).toBe('https://example.com/article');
+    expect(create).toHaveBeenCalledWith({
+      content: 'https://example.com/article',
+      type: 'LINK',
+      url: 'https://example.com/article',
+      title: null,
+      status: 'INBOX',
+    });
+  });
+
+  it('always sets title to null (title extraction deferred) and status to INBOX', async () => {
+    const { create, asItemsRepository } = buildRepository();
+    const service = new ItemsService(asItemsRepository);
+
+    await service.capture({ content: 'https://example.com' });
+
+    const [payload] = create.mock.calls[0] ?? [];
+    expect(payload.title).toBeNull();
+    expect(payload.status).toBe('INBOX');
+  });
+
+  it('treats a non-http(s) scheme as plain text, not a link', async () => {
+    const { asItemsRepository } = buildRepository();
+    const service = new ItemsService(asItemsRepository);
+
+    const item = await service.capture({ content: 'ftp://example.com/file' });
+
+    expect(item.type).toBe('TEXT');
+    expect(item.url).toBeNull();
+  });
+});

@@ -1,0 +1,42 @@
+// Prisma schema — single source of truth for the database schema.
+// SQLite for the MVP; moving to PostgreSQL later is a provider + DATABASE_URL change only.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+enum MediaType {
+  TEXT
+  LINK
+}
+
+enum Category {
+  MOVIE
+  BOOK
+  GAME
+  ARTICLE
+}
+
+enum Status {
+  INBOX
+  ORGANIZED
+}
+
+model MediaItem {
+  id        String    @id @default(cuid())
+  content   String
+  type      MediaType
+  url       String?
+  title     String?
+  category  Category?
+  status    Status    @default(INBOX)
+  createdAt DateTime  @default(now())
+
+  @@index([status, createdAt])
+  @@index([status, category, createdAt])
+}
