@@ -57,14 +57,20 @@ export const handlers: HttpHandler[] = [
   http.patch('*/items/:id', async ({ params, request }) => {
     const body = (await request.json()) as { category: string };
     const index = itemsDb.findIndex((existing) => existing.id === params.id);
+    const existing = itemsDb[index];
 
-    if (index === -1) {
+    if (!existing) {
       return HttpResponse.json({ error: { code: 'NOT_FOUND', message: 'Item not found' } }, { status: 404 });
     }
 
-    itemsDb[index] = { ...itemsDb[index], category: body.category as MediaItem['category'], status: 'ORGANIZED' };
+    const updated: MediaItem = {
+      ...existing,
+      category: body.category as MediaItem['category'],
+      status: 'ORGANIZED',
+    };
+    itemsDb[index] = updated;
 
-    return HttpResponse.json(itemsDb[index]);
+    return HttpResponse.json(updated);
   }),
 
   http.delete('*/items/:id', ({ params }) => {

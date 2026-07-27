@@ -25,7 +25,8 @@ describe('InboxView', () => {
 
     await waitFor(() => expect(screen.getAllByRole('listitem')).toHaveLength(2));
 
-    const firstCard = screen.getAllByRole('listitem')[0];
+    const [firstCard] = screen.getAllByRole('listitem');
+    if (!firstCard) throw new Error('expected at least one listitem');
     await userEvent.click(within(firstCard).getByRole('button', { name: /movie/i }));
 
     await waitFor(() => expect(screen.getAllByRole('listitem')).toHaveLength(1));
@@ -37,7 +38,8 @@ describe('InboxView', () => {
 
     await waitFor(() => expect(screen.getAllByRole('listitem')).toHaveLength(2));
 
-    const firstCard = screen.getAllByRole('listitem')[0];
+    const [firstCard] = screen.getAllByRole('listitem');
+    if (!firstCard) throw new Error('expected at least one listitem');
     await userEvent.click(within(firstCard).getByRole('button', { name: /delete item/i }));
 
     await waitFor(() => expect(screen.getAllByRole('listitem')).toHaveLength(1));

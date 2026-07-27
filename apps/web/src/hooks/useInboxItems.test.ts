@@ -17,7 +17,7 @@ describe('useInboxItems', () => {
 
     expect(result.current.error).toBeNull();
     expect(result.current.data).toHaveLength(2);
-    expect(result.current.data?.[0].id).toBe('1');
+    expect(result.current.data?.[0]?.id).toBe('1');
   });
 
   it('surfaces an error when the request fails', async () => {
