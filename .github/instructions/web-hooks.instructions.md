@@ -1,5 +1,5 @@
 ---
-applyTo: "src/hooks/**/*.ts"
+applyTo: "apps/web/src/hooks/**/*.ts"
 ---
 # Custom Hooks
 

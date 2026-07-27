@@ -1,5 +1,5 @@
 ---
-applyTo: "src/routes/**/*.ts"
+applyTo: "apps/api/src/routes/**/*.ts"
 ---
 # Route Layer
 

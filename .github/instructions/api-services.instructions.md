@@ -1,5 +1,5 @@
 ---
-applyTo: "src/services/**/*.ts"
+applyTo: "apps/api/src/services/**/*.ts"
 ---
 # Service Layer
 
