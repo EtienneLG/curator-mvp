@@ -1,4 +1,4 @@
-import type { CaptureItemInput } from '../schemas/item.schema.js';
+import type { CaptureItemInput, ListItemsQuery } from '../schemas/item.schema.js';
 import type { ItemsRepository } from '../repositories/items.repository.js';
 
 // Server-authoritative link detection: only absolute http(s) URLs are treated as links —
@@ -28,5 +28,10 @@ export class ItemsService {
       title: null,
       status: 'INBOX',
     });
+  }
+
+  // Lists MediaItems filtered by status (e.g. Inbox: status=INBOX), newest-first.
+  async list(query: ListItemsQuery) {
+    return this.itemsRepository.findByStatus(query.status);
   }
 }

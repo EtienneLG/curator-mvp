@@ -28,4 +28,37 @@ describe('ItemsRepository', () => {
     expect(stored?.content).toBe('https://example.com/article');
     expect(stored?.type).toBe('LINK');
   });
+
+  it('findByStatus returns only matching items, newest-first', async () => {
+    const repository = new ItemsRepository();
+
+    const older = await repository.create({
+      content: 'first inbox note',
+      type: 'TEXT',
+      url: null,
+      title: null,
+      status: 'INBOX',
+    });
+    await new Promise((resolve) => setTimeout(resolve, 5));
+    const newer = await repository.create({
+      content: 'second inbox note',
+      type: 'TEXT',
+      url: null,
+      title: null,
+      status: 'INBOX',
+    });
+    await repository.create({
+      content: 'an organized item',
+      type: 'TEXT',
+      url: null,
+      title: null,
+      status: 'ORGANIZED',
+    });
+
+    const inboxItems = await repository.findByStatus('INBOX');
+
+    expect(inboxItems).toHaveLength(2);
+    expect(inboxItems.map((item) => item.id)).toEqual([newer.id, older.id]);
+    expect(inboxItems.every((item) => item.status === 'INBOX')).toBe(true);
+  });
 });

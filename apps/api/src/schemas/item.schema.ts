@@ -41,3 +41,15 @@ export const CaptureItemSchema = z.object({
 });
 
 export type CaptureItemInput = z.infer<typeof CaptureItemSchema>;
+
+// Query params for listing items by status (e.g. `GET /items?status=inbox`). Accepts a
+// case-insensitive `status` so both the Inbox and future Vault screens can share this route;
+// the raw input is uppercased before being validated against the closed `Status` enum.
+export const ListItemsQuerySchema = z.object({
+  status: z
+    .string()
+    .transform((value) => value.toUpperCase())
+    .pipe(StatusSchema),
+});
+
+export type ListItemsQuery = z.infer<typeof ListItemsQuerySchema>;

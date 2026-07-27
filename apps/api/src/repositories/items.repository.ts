@@ -15,4 +15,12 @@ export class ItemsRepository {
   async create(data: CreateMediaItemData) {
     return prisma.mediaItem.create({ data });
   }
+
+  // Inbox/Vault are ordered newest-first (createdAt DESC per PROJECT.md).
+  async findByStatus(status: Status) {
+    return prisma.mediaItem.findMany({
+      where: { status },
+      orderBy: { createdAt: 'desc' },
+    });
+  }
 }

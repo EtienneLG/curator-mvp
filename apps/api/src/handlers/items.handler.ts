@@ -1,6 +1,6 @@
 import type { FastifyReply, FastifyRequest } from 'fastify';
 
-import type { CaptureItemInput } from '../schemas/item.schema.js';
+import type { CaptureItemInput, ListItemsQuery } from '../schemas/item.schema.js';
 import type { ItemsService } from '../services/items.service.js';
 
 // Thin: validate → delegate → respond. Body validation now happens at the Fastify layer
@@ -14,5 +14,17 @@ export function createPostItem(itemsService: ItemsService) {
   ) {
     const item = await itemsService.capture(request.body);
     reply.status(201).send(item);
+  };
+}
+
+// Thin: validate → delegate → respond. Query validation happens at the Fastify layer
+// (route `schema.querystring`, see routes/items.route.ts) via fastify-type-provider-zod.
+export function createGetItems(itemsService: ItemsService) {
+  return async function getItems(
+    request: FastifyRequest<{ Querystring: ListItemsQuery }>,
+    reply: FastifyReply,
+  ) {
+    const items = await itemsService.list(request.query);
+    reply.status(200).send(items);
   };
 }

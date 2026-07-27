@@ -56,3 +56,73 @@ describe('[POST /items]', () => {
     await app.close();
   });
 });
+
+describe('[GET /items]', () => {
+  afterEach(async () => {
+    await prisma.mediaItem.deleteMany();
+  });
+
+  it('returns only INBOX items for a lowercase status query, newest-first', async () => {
+    const app = await buildApp(loadEnv());
+
+    await app.inject({ method: 'POST', url: '/items', payload: { content: 'first inbox note' } });
+    await app.inject({ method: 'POST', url: '/items', payload: { content: 'second inbox note' } });
+
+    const response = await app.inject({ method: 'GET', url: '/items?status=inbox' });
+
+    expect(response.statusCode).toBe(200);
+    const body = response.json();
+    expect(body).toHaveLength(2);
+    expect(body.every((item: { status: string }) => item.status === 'INBOX')).toBe(true);
+    expect(body[0].content).toBe('second inbox note');
+
+    await app.close();
+  });
+
+  it('returns only ORGANIZED items when status=ORGANIZED', async () => {
+    const app = await buildApp(loadEnv());
+
+    await prisma.mediaItem.create({
+      data: {
+        content: 'organized note',
+        type: 'TEXT',
+        url: null,
+        title: null,
+        status: 'ORGANIZED',
+        category: 'ARTICLE',
+      },
+    });
+    await app.inject({ method: 'POST', url: '/items', payload: { content: 'inbox note' } });
+
+    const response = await app.inject({ method: 'GET', url: '/items?status=ORGANIZED' });
+
+    expect(response.statusCode).toBe(200);
+    const body = response.json();
+    expect(body).toHaveLength(1);
+    expect(body[0].status).toBe('ORGANIZED');
+
+    await app.close();
+  });
+
+  it('returns a 400 validation error when status is missing', async () => {
+    const app = await buildApp(loadEnv());
+
+    const response = await app.inject({ method: 'GET', url: '/items' });
+
+    expect(response.statusCode).toBe(400);
+    expect(response.json().error.code).toBe('VALIDATION_ERROR');
+
+    await app.close();
+  });
+
+  it('returns a 400 validation error when status is not a recognized value', async () => {
+    const app = await buildApp(loadEnv());
+
+    const response = await app.inject({ method: 'GET', url: '/items?status=archived' });
+
+    expect(response.statusCode).toBe(400);
+    expect(response.json().error.code).toBe('VALIDATION_ERROR');
+
+    await app.close();
+  });
+});

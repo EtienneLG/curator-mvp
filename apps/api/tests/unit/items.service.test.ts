@@ -10,7 +10,23 @@ function buildRepository() {
     createdAt: new Date('2026-07-27T00:00:00.000Z'),
     ...data,
   }));
-  return { create, asItemsRepository: { create } as unknown as ItemsRepository };
+  const findByStatus = vi.fn(async (status) => [
+    {
+      id: 'item-1',
+      content: 'note',
+      type: 'TEXT',
+      url: null,
+      title: null,
+      category: null,
+      status,
+      createdAt: new Date('2026-07-27T00:00:00.000Z'),
+    },
+  ]);
+  return {
+    create,
+    findByStatus,
+    asItemsRepository: { create, findByStatus } as unknown as ItemsRepository,
+  };
 }
 
 describe('ItemsService', () => {
@@ -67,5 +83,16 @@ describe('ItemsService', () => {
 
     expect(item.type).toBe('TEXT');
     expect(item.url).toBeNull();
+  });
+
+  it('lists items by status, delegating to the repository', async () => {
+    const { findByStatus, asItemsRepository } = buildRepository();
+    const service = new ItemsService(asItemsRepository);
+
+    const items = await service.list({ status: 'INBOX' });
+
+    expect(findByStatus).toHaveBeenCalledWith('INBOX');
+    expect(items).toHaveLength(1);
+    expect(items[0]?.status).toBe('INBOX');
   });
 });
