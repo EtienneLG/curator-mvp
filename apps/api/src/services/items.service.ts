@@ -1,4 +1,5 @@
-import type { CaptureItemInput, ListItemsQuery } from '../schemas/item.schema.js';
+import { NotFoundError } from '../lib/errors.js';
+import type { CaptureItemInput, ListItemsQuery, TriageItemInput } from '../schemas/item.schema.js';
 import type { ItemsRepository } from '../repositories/items.repository.js';
 
 // Server-authoritative link detection: only absolute http(s) URLs are treated as links —
@@ -33,5 +34,16 @@ export class ItemsService {
   // Lists MediaItems filtered by status (e.g. Inbox: status=INBOX), newest-first.
   async list(query: ListItemsQuery) {
     return this.itemsRepository.findByStatus(query.status);
+  }
+
+  // Triage: atomically sets `category` and `status = ORGANIZED` (docs/PROJECT.md), which
+  // removes the item from the Inbox result set. Throws NotFoundError when `id` doesn't
+  // match any MediaItem.
+  async triage(id: string, input: TriageItemInput) {
+    const item = await this.itemsRepository.updateCategory(id, input.category);
+    if (!item) {
+      throw new NotFoundError(`MediaItem not found: ${id}`);
+    }
+    return item;
   }
 }

@@ -126,3 +126,73 @@ describe('[GET /items]', () => {
     await app.close();
   });
 });
+
+describe('[PATCH /items/:id]', () => {
+  afterEach(async () => {
+    await prisma.mediaItem.deleteMany();
+  });
+
+  it('triages an item: sets category, status ORGANIZED, and removes it from the Inbox', async () => {
+    const app = await buildApp(loadEnv());
+
+    const captureResponse = await app.inject({
+      method: 'POST',
+      url: '/items',
+      payload: { content: 'a movie to watch' },
+    });
+    const { id } = captureResponse.json();
+
+    const response = await app.inject({
+      method: 'PATCH',
+      url: `/items/${id}`,
+      payload: { category: 'MOVIE' },
+    });
+
+    expect(response.statusCode).toBe(200);
+    const body = response.json();
+    expect(body.category).toBe('MOVIE');
+    expect(body.status).toBe('ORGANIZED');
+
+    const inboxResponse = await app.inject({ method: 'GET', url: '/items?status=inbox' });
+    expect(inboxResponse.json()).toHaveLength(0);
+
+    await app.close();
+  });
+
+  it('returns a 404 error when the item does not exist', async () => {
+    const app = await buildApp(loadEnv());
+
+    const response = await app.inject({
+      method: 'PATCH',
+      url: '/items/does-not-exist',
+      payload: { category: 'BOOK' },
+    });
+
+    expect(response.statusCode).toBe(404);
+    expect(response.json().error.code).toBe('NOT_FOUND');
+
+    await app.close();
+  });
+
+  it('returns a 400 validation error when category is not a recognized value', async () => {
+    const app = await buildApp(loadEnv());
+
+    const captureResponse = await app.inject({
+      method: 'POST',
+      url: '/items',
+      payload: { content: 'something to triage' },
+    });
+    const { id } = captureResponse.json();
+
+    const response = await app.inject({
+      method: 'PATCH',
+      url: `/items/${id}`,
+      payload: { category: 'PODCAST' },
+    });
+
+    expect(response.statusCode).toBe(400);
+    expect(response.json().error.code).toBe('VALIDATION_ERROR');
+
+    await app.close();
+  });
+});

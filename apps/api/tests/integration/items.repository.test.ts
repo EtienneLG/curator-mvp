@@ -61,4 +61,33 @@ describe('ItemsRepository', () => {
     expect(inboxItems.map((item) => item.id)).toEqual([newer.id, older.id]);
     expect(inboxItems.every((item) => item.status === 'INBOX')).toBe(true);
   });
+
+  it('updateCategory sets category and status ORGANIZED for an existing item', async () => {
+    const repository = new ItemsRepository();
+
+    const created = await repository.create({
+      content: 'a note to triage',
+      type: 'TEXT',
+      url: null,
+      title: null,
+      status: 'INBOX',
+    });
+
+    const updated = await repository.updateCategory(created.id, 'ARTICLE');
+
+    expect(updated?.category).toBe('ARTICLE');
+    expect(updated?.status).toBe('ORGANIZED');
+
+    const stored = await prisma.mediaItem.findUnique({ where: { id: created.id } });
+    expect(stored?.category).toBe('ARTICLE');
+    expect(stored?.status).toBe('ORGANIZED');
+  });
+
+  it('updateCategory returns null for an unknown id', async () => {
+    const repository = new ItemsRepository();
+
+    const updated = await repository.updateCategory('does-not-exist', 'MOVIE');
+
+    expect(updated).toBeNull();
+  });
 });

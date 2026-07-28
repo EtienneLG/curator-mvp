@@ -53,3 +53,18 @@ export const ListItemsQuerySchema = z.object({
 });
 
 export type ListItemsQuery = z.infer<typeof ListItemsQuerySchema>;
+
+// Path params for `PATCH /items/:id` (and any future single-item route).
+export const ItemParamsSchema = z.object({
+  id: z.string().trim().min(1, 'id is required'),
+});
+
+export type ItemParams = z.infer<typeof ItemParamsSchema>;
+
+// Triage: tapping a category sets `category` and `status = ORGANIZED` atomically
+// (docs/PROJECT.md — Triage business rule). Only the closed `Category` set is accepted.
+export const TriageItemSchema = z.object({
+  category: CategorySchema,
+});
+
+export type TriageItemInput = z.infer<typeof TriageItemSchema>;

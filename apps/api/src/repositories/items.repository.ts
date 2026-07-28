@@ -1,4 +1,5 @@
-import type { MediaType, Status } from '@prisma/client';
+import { Prisma } from '@prisma/client';
+import type { Category, MediaType, Status } from '@prisma/client';
 
 import { prisma } from '../lib/prisma.js';
 
@@ -22,5 +23,22 @@ export class ItemsRepository {
       where: { status },
       orderBy: { createdAt: 'desc' },
     });
+  }
+
+  // Triage: sets `category` and `status = ORGANIZED` atomically (docs/PROJECT.md). Returns
+  // `null` when `id` does not match any MediaItem (Prisma P2025) instead of throwing, so the
+  // service layer owns translating "not found" into a business exception.
+  async updateCategory(id: string, category: Category) {
+    try {
+      return await prisma.mediaItem.update({
+        where: { id },
+        data: { category, status: 'ORGANIZED' },
+      });
+    } catch (error) {
+      if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2025') {
+        return null;
+      }
+      throw error;
+    }
   }
 }

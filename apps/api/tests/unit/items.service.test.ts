@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 
+import { NotFoundError } from '../../src/lib/errors.js';
 import type { ItemsRepository } from '../../src/repositories/items.repository.js';
 import { ItemsService } from '../../src/services/items.service.js';
 
@@ -22,10 +23,23 @@ function buildRepository() {
       createdAt: new Date('2026-07-27T00:00:00.000Z'),
     },
   ]);
+  const updateCategory = vi.fn(async (id: string, category: string) =>
+    ({
+      id,
+      content: 'note',
+      type: 'TEXT',
+      url: null,
+      title: null,
+      category,
+      status: 'ORGANIZED',
+      createdAt: new Date('2026-07-27T00:00:00.000Z'),
+    }) as Record<string, unknown> | null,
+  );
   return {
     create,
     findByStatus,
-    asItemsRepository: { create, findByStatus } as unknown as ItemsRepository,
+    updateCategory,
+    asItemsRepository: { create, findByStatus, updateCategory } as unknown as ItemsRepository,
   };
 }
 
@@ -94,5 +108,26 @@ describe('ItemsService', () => {
     expect(findByStatus).toHaveBeenCalledWith('INBOX');
     expect(items).toHaveLength(1);
     expect(items[0]?.status).toBe('INBOX');
+  });
+
+  it('triages an item, setting category and status ORGANIZED via the repository', async () => {
+    const { updateCategory, asItemsRepository } = buildRepository();
+    const service = new ItemsService(asItemsRepository);
+
+    const item = await service.triage('item-1', { category: 'MOVIE' });
+
+    expect(updateCategory).toHaveBeenCalledWith('item-1', 'MOVIE');
+    expect(item.category).toBe('MOVIE');
+    expect(item.status).toBe('ORGANIZED');
+  });
+
+  it('throws NotFoundError when the repository finds no matching item', async () => {
+    const { asItemsRepository, updateCategory } = buildRepository();
+    updateCategory.mockResolvedValueOnce(null);
+    const service = new ItemsService(asItemsRepository);
+
+    await expect(service.triage('missing-id', { category: 'MOVIE' })).rejects.toThrow(
+      NotFoundError,
+    );
   });
 });
