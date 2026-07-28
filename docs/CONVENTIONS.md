@@ -32,8 +32,8 @@ source of truth for formatting.
 - Entity: `MediaItem`. Fields: `content`, `title`, `category`, `year`, `creator`,
   `description`, `status`, `createdAt`. No `type`/`url` fields (removed per DEC-016).
 - Categories: `MOVIE`, `BOOK`, `GAME`, `ARTICLE`. Statuses: `INBOX`, `ORGANIZED`. Types: `TEXT`, `LINK`.
-- Screens: `Inbox`, `Library` (previously "Vault" — see DECISIONS.md DEC-015; do not reintroduce
-  "Vault" naming in new code).
+- Screens: `Inbox`, `Library` (previously "Library" — see DECISIONS.md DEC-015; do not reintroduce
+  "Library" naming in new code).
 
 ### Git & Review
 - Conventional commits: `type(scope): description` (e.g., `feat(inbox): add link card`).

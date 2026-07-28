@@ -14,7 +14,7 @@ export async function getInboxItems(): Promise<MediaItem[]> {
   return ItemListResponseSchema.parse(data);
 }
 
-export async function getVaultItems(): Promise<MediaItem[]> {
+export async function getLibraryItems(): Promise<MediaItem[]> {
   const data = await apiFetch<unknown>('/items?status=organized');
   return ItemListResponseSchema.parse(data);
 }

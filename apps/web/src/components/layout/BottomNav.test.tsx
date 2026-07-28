@@ -5,7 +5,7 @@ import { describe, expect, it } from 'vitest';
 import { BottomNav } from './BottomNav';
 
 describe('BottomNav', () => {
-  it('renders links to Inbox and Vault', () => {
+  it('renders links to Inbox and Library', () => {
     render(
       <MemoryRouter initialEntries={['/']}>
         <BottomNav />
@@ -13,17 +13,17 @@ describe('BottomNav', () => {
     );
 
     expect(screen.getByRole('link', { name: 'Inbox' })).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: 'Vault' })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Library' })).toBeInTheDocument();
   });
 
   it('marks the current route as active', () => {
     render(
-      <MemoryRouter initialEntries={['/vault']}>
+      <MemoryRouter initialEntries={['/library']}>
         <BottomNav />
       </MemoryRouter>,
     );
 
-    expect(screen.getByRole('link', { name: 'Vault' })).toHaveClass('text-blue-600');
+    expect(screen.getByRole('link', { name: 'Library' })).toHaveClass('text-blue-600');
     expect(screen.getByRole('link', { name: 'Inbox' })).not.toHaveClass('text-blue-600');
   });
 });

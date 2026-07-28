@@ -7,12 +7,12 @@ interface NavItem {
 
 const NAV_ITEMS: NavItem[] = [
   { to: '/', label: 'Inbox' },
-  { to: '/vault', label: 'Vault' },
+  { to: '/library', label: 'Library' },
 ];
 
 /**
  * Horizontal navbar fixed to the bottom of the screen for switching between
- * the Inbox and Vault pages (mobile-first — see docs/PROJECT.md → Primary
+ * the Inbox and Library pages (mobile-first — see docs/PROJECT.md → Primary
  * surface). Rendered once by `AppLayout` so it persists across route
  * navigation.
  */

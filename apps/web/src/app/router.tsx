@@ -33,10 +33,10 @@ const router = createBrowserRouter([
         },
       },
       {
-        path: 'vault',
+        path: 'library',
         lazy: async () => {
-          const { VaultPage } = await import('./VaultPage');
-          return { Component: VaultPage };
+          const { LibraryPage } = await import('./LibraryPage');
+          return { Component: LibraryPage };
         },
       },
     ],

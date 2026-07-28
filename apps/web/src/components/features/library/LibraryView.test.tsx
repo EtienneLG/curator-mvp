@@ -4,12 +4,12 @@ import { describe, expect, it } from 'vitest';
 
 import { server } from '../../../../tests/msw/server';
 import { createQueryClientWrapper } from '../../../../tests/test-utils';
-import { VaultView } from './VaultView';
+import { LibraryView } from './LibraryView';
 
-describe('VaultView', () => {
-  it('renders the vault items newest-first once loaded, read-only', async () => {
+describe('LibraryView', () => {
+  it('renders the library items newest-first once loaded, read-only', async () => {
     const { Wrapper } = createQueryClientWrapper();
-    render(<VaultView />, { wrapper: Wrapper });
+    render(<LibraryView />, { wrapper: Wrapper });
 
     expect(screen.getByRole('status')).toHaveTextContent(/loading/i);
 
@@ -22,20 +22,20 @@ describe('VaultView', () => {
     expect(screen.queryByRole('button', { name: /delete item/i })).not.toBeInTheDocument();
   });
 
-  it('renders an empty state when there are no vault items', async () => {
+  it('renders an empty state when there are no library items', async () => {
     server.use(http.get('*/items', () => HttpResponse.json([])));
 
     const { Wrapper } = createQueryClientWrapper();
-    render(<VaultView />, { wrapper: Wrapper });
+    render(<LibraryView />, { wrapper: Wrapper });
 
-    await waitFor(() => expect(screen.getByText(/vault is empty/i)).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByText(/library is empty/i)).toBeInTheDocument());
   });
 
   it('renders an error state when the request fails', async () => {
     server.use(http.get('*/items', () => HttpResponse.json(null, { status: 500 })));
 
     const { Wrapper } = createQueryClientWrapper();
-    render(<VaultView />, { wrapper: Wrapper });
+    render(<LibraryView />, { wrapper: Wrapper });
 
     await waitFor(() => expect(screen.getByRole('alert')).toBeInTheDocument());
   });

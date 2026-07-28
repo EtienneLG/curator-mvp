@@ -78,7 +78,7 @@ Agents MUST respect these when generating code:
 | **Inbox** | Default screen listing unorganized items, newest first, as uniform cards; content that looks like a URL is cosmetically auto-linkified client-side for display only (no stored field, no business meaning). |
 | **Refine & Triage Modal** | Tapping an Inbox card triggers the backend's best-effort suggestion lookup (URL → fetch webpage; otherwise → "determine media" lookup) and opens a modal showing the raw capture and any suggestions, with editable fields (category, title, year, creator, description). A **Validate** action commits the refined metadata and moves the item to the Library. |
 | **Delete** | Inline action on the Inbox card, separate from the modal. |
-| **Library** *(previously "Vault")* | Secondary screen listing organized items with their full refined metadata, with an `All / Movies / Books / Games / Articles` category filter and a sort filter (newest/oldest by capture date, newest/oldest by year, title A–Z/Z–A). |
+| **Library** *(previously "Library")* | Secondary screen listing organized items with their full refined metadata, with an `All / Movies / Books / Games / Articles` category filter and a sort filter (newest/oldest by capture date, newest/oldest by year, title A–Z/Z–A). |
 | **Bottom Navbar** | Fixed navigation bar for switching between Inbox and Library. |
 
 ## Explicitly Out of Scope (MVP)

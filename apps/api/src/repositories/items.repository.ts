@@ -17,7 +17,7 @@ export class ItemsRepository {
     return prisma.mediaItem.create({ data });
   }
 
-  // Inbox/Vault are ordered newest-first (createdAt DESC per PROJECT.md).
+  // Inbox/Library are ordered newest-first (createdAt DESC per PROJECT.md).
   async findByStatus(status: Status) {
     return prisma.mediaItem.findMany({
       where: { status },

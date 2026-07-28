@@ -31,7 +31,7 @@ export const inboxItemsFixture: MediaItem[] = [
   },
 ];
 
-export const vaultItemsFixture: MediaItem[] = [
+export const libraryItemsFixture: MediaItem[] = [
   {
     id: '3',
     content: 'Dune',
@@ -61,7 +61,7 @@ let itemsDb: MediaItem[] = [];
 
 /** Resets the fake DB to the fixtures — call from `afterEach` in test setup. */
 export function resetInboxItemsDb() {
-  itemsDb = [...inboxItemsFixture, ...vaultItemsFixture].map((item) => ({ ...item }));
+  itemsDb = [...inboxItemsFixture, ...libraryItemsFixture].map((item) => ({ ...item }));
 }
 
 resetInboxItemsDb();

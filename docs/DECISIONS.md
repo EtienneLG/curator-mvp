@@ -139,15 +139,15 @@ validation going forward — attach the schema to the route instead. Do not down
 `fastify-type-provider-zod@^4` (Zod v3 only) or bypass the type provider's validator/serializer
 compilers.
 
-## DEC-015 — Rename "Vault" to "Library"
+## DEC-015 — Rename "Library" to "Library"
 **Status:** Accepted
 **Date:** 2026-07-28
-**Decision:** Renamed the second main screen from "Vault" to "Library" everywhere: docs, the
-`/vault` route (→ `/library`), component/hook/file names, Zustand store fields, and TanStack
-Query keys (`['items', 'vault', ...]` → `['items', 'library', ...]`).
+**Decision:** Renamed the second main screen from "Library" to "Library" everywhere: docs, the
+`/library` route (→ `/library`), component/hook/file names, Zustand store fields, and TanStack
+Query keys (`['items', 'library', ...]` → `['items', 'library', ...]`).
 **Why:** Naming change requested by the product owner; used pervasively enough to track so
-agents don't reintroduce "Vault" in new code.
-**Do not:** Leave mixed naming (e.g., a `LibraryView` importing from a `vault/` folder) — this is
+agents don't reintroduce "Library" in new code.
+**Do not:** Leave mixed naming (e.g., a `LibraryView` importing from a `library/` folder) — this is
 a full rename, not an alias.
 
 ## DEC-016 — Refine-Time Web Suggestions & Unified Capture Input (external provider TBD)

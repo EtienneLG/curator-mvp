@@ -4,12 +4,12 @@ import { describe, expect, it } from 'vitest';
 
 import { server } from '../../tests/msw/server';
 import { createQueryClientWrapper } from '../../tests/test-utils';
-import { useVaultItems } from './useVaultItems';
+import { useLibraryItems } from './useLibraryItems';
 
-describe('useVaultItems', () => {
-  it('fetches and returns the vault list, newest-first as provided by the API', async () => {
+describe('useLibraryItems', () => {
+  it('fetches and returns the library list, newest-first as provided by the API', async () => {
     const { Wrapper } = createQueryClientWrapper();
-    const { result } = renderHook(() => useVaultItems(), { wrapper: Wrapper });
+    const { result } = renderHook(() => useLibraryItems(), { wrapper: Wrapper });
 
     expect(result.current.isLoading).toBe(true);
 
@@ -24,7 +24,7 @@ describe('useVaultItems', () => {
     server.use(http.get('*/items', () => HttpResponse.json(null, { status: 500 })));
 
     const { Wrapper } = createQueryClientWrapper();
-    const { result } = renderHook(() => useVaultItems(), { wrapper: Wrapper });
+    const { result } = renderHook(() => useLibraryItems(), { wrapper: Wrapper });
 
     await waitFor(() => expect(result.current.isLoading).toBe(false));
 
