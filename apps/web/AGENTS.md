@@ -54,11 +54,12 @@ src/
 │   ├── layout/              # Layout components (Header / app shell)
 │   └── features/            # Feature-specific components
 │       ├── capture/         # CaptureBar.tsx
-│       ├── inbox/           # InboxView.tsx, ItemCard.tsx, TextCard.tsx, LinkCard.tsx, CategorySelector.tsx, DeleteButton.tsx
-│       └── vault/           # VaultView.tsx, CategoryFilter.tsx
+│       ├── inbox/           # InboxView.tsx, ItemCard.tsx, RefineMetadataModal.tsx, DeleteButton.tsx
+│       └── library/         # LibraryView.tsx, CategoryFilter.tsx, SortFilter.tsx
 ├── hooks/                   # Custom hooks (data fetching, state, side effects)
 │   ├── useInboxItems.ts
-│   ├── useVaultItems.ts
+│   ├── useLibraryItems.ts
+│   ├── useSuggestions.ts
 │   └── useCaptureItem.ts
 ├── services/                # Typed API client functions
 │   ├── api-client.ts        # Configured fetch instance (base URL from VITE_API_URL)
@@ -70,7 +71,7 @@ src/
 │   ├── utils.ts
 │   └── constants.ts
 ├── stores/                  # Zustand stores for global client state
-│   └── ui.store.ts          # active Vault filter, capture input buffer
+│   └── ui.store.ts          # active Library filters (category + sort), capture input buffer
 └── styles/
     └── globals.css
 ```
@@ -101,7 +102,7 @@ src/
 ```typescript
 // Pattern: ['entity', 'action', params]
 ['items', 'inbox']
-['items', 'vault', { category: 'MOVIE' }]
+['items', 'library', { category: 'MOVIE', sort: 'createdAt:desc' }]
 ```
 
 ## Component Rules

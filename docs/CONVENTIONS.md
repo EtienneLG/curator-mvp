@@ -20,16 +20,20 @@ source of truth for formatting.
 - ES Modules (`import`/`export`).
 
 ### Naming
-- **Files**: kebab-case for utilities/modules (`link-metadata.service.ts`, `format-date.ts`);
+- **Files**: kebab-case for utilities/modules (`suggestions.service.ts`, `format-date.ts`);
   PascalCase for React components (`InboxView.tsx`).
 - **Components**: PascalCase. **Hooks**: camelCase, `use` prefix (`useInboxItems`).
 - **Classes**: PascalCase. **Functions/variables**: camelCase. **Constants**: UPPER_SNAKE_CASE.
 - **Types/interfaces**: PascalCase, no `I` prefix (`MediaItem`, `CaptureInput`).
-- **Enums**: prefer string-literal unions; the domain enums are `MediaType`, `Category`, `Status`.
+- **Enums**: prefer string-literal unions; the domain enums are `Category`, `Status` (no
+  `MediaType` — see DECISIONS.md DEC-016).
 
 ### Domain Vocabulary (use these exact names)
-- Entity: `MediaItem`. Fields: `content`, `type`, `url`, `title`, `category`, `status`, `createdAt`.
+- Entity: `MediaItem`. Fields: `content`, `title`, `category`, `year`, `creator`,
+  `description`, `status`, `createdAt`. No `type`/`url` fields (removed per DEC-016).
 - Categories: `MOVIE`, `BOOK`, `GAME`, `ARTICLE`. Statuses: `INBOX`, `ORGANIZED`. Types: `TEXT`, `LINK`.
+- Screens: `Inbox`, `Library` (previously "Vault" — see DECISIONS.md DEC-015; do not reintroduce
+  "Vault" naming in new code).
 
 ### Git & Review
 - Conventional commits: `type(scope): description` (e.g., `feat(inbox): add link card`).
@@ -59,9 +63,9 @@ src/
 │   ├── layout/              # Header / shell layout
 │   └── features/            # Feature components
 │       ├── capture/         # CaptureBar
-│       ├── inbox/           # InboxView, ItemCard, TextCard, LinkCard, CategorySelector, DeleteButton
-│       └── vault/           # VaultView, CategoryFilter
-├── hooks/                   # Custom hooks (useInboxItems, useVaultItems, useCaptureItem…)
+│       ├── inbox/           # InboxView, ItemCard, RefineMetadataModal, DeleteButton
+│       └── library/         # LibraryView, CategoryFilter, SortFilter
+├── hooks/                   # Custom hooks (useInboxItems, useLibraryItems, useCaptureItem, useSuggestions…)
 ├── services/                # api-client.ts, item.service.ts
 ├── types/                   # Zod schemas + inferred types (media-item.types.ts)
 ├── lib/                     # utils.ts, constants.ts
@@ -82,7 +86,8 @@ src/
 ### Hooks Rules
 - File naming `use{Name}.ts`; never call hooks conditionally.
 - **TanStack Query for ALL server state** — never `useEffect` + `useState` for fetching.
-- Query key convention: `['items', 'inbox']`, `['items', 'vault', { category }]`.
+- Query key convention: `['items', 'inbox']`, `['items', 'library', { category, sort }]`,
+  `['items', 'suggestions', id]`.
 - `useMutation` with `onSuccess` invalidation; optimistic updates for triage/delete.
 - Return consistent shapes: `{ data, isLoading, error }`.
 
@@ -90,7 +95,7 @@ src/
 - Server state → TanStack Query. Global client state → Zustand. Local → `useState`.
 - Forms: for anything non-trivial use **React Hook Form + Zod resolver**. The Capture Bar is a
   single input and may be a simple controlled field — do not over-engineer it.
-- URL state (`useSearchParams`) is acceptable for the Vault filter.
+- URL state (`useSearchParams`) is acceptable for the Library category/sort filters.
 
 ### Styling
 - **Tailwind CSS**, mobile-first (the primary surface is mobile).
@@ -98,8 +103,9 @@ src/
 
 ### Error Handling & Accessibility
 - Error boundaries at route/feature level; toast on action failure; never swallow errors.
-- Semantic HTML, ARIA labels on icon-only controls (e.g., delete), keyboard navigable,
-  WCAG AA color contrast. Triage buttons must be tap-friendly.
+- Semantic HTML, ARIA labels on icon-only controls (e.g., delete) and the refine-metadata modal
+  (focus trap, `Escape` to close, labeled form fields), keyboard navigable, WCAG AA color
+  contrast. Triage/validate controls must be tap-friendly.
 
 ### Banned (Frontend)
 - Class components · `any` · `dangerouslySetInnerHTML` without sanitization ·
@@ -120,7 +126,7 @@ src/
 src/
 ├── routes/          # items.route.ts — paths, methods, Zod schemas
 ├── handlers/        # items.handler.ts — thin HTTP mapping
-├── services/        # items.service.ts, link-metadata.service.ts — business rules
+├── services/        # items.service.ts, suggestions.service.ts — business rules
 ├── repositories/    # items.repository.ts — Prisma access
 ├── schemas/         # item.schema.ts — Zod contracts (shared shape with frontend)
 ├── plugins/         # Fastify plugins (logging, request IDs, swagger)
@@ -153,8 +159,8 @@ prisma/
 ### Database (Prisma)
 - All DB access lives in repositories — never in handlers or services directly.
 - `prisma/schema.prisma` is the schema source of truth; all changes go through migrations.
-- Newest-first ordering (`orderBy: { createdAt: 'desc' }`) and Vault category filtering live in
-  the repository.
+- Newest-first ordering (`orderBy: { createdAt: 'desc' }`) by default, plus category and sort
+  filtering (`year`, `title`) for the Library, live in the repository.
 
 ### Logging & Docs
 - **Pino** only — never `console.log`. Structured objects, never log raw PII.

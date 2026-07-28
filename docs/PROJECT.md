@@ -21,39 +21,52 @@ link is a `MediaItem` that moves through a two-state lifecycle: **inbox → orga
 
 | Entity | Description |
 |--------|-------------|
-| `MediaItem` | A single capture — either free text or a web link — that is first placed in the Inbox, then triaged into a category and moved to the Vault, or deleted. |
+| `MediaItem` | A single free-form capture (any text — a note or a URL, with no upfront distinction) that is first placed in the Inbox, then triaged (with refined metadata) into a category and moved to the Library, or deleted. |
 
 ### `MediaItem` Fields
 
 | Field | Type | Notes |
 |-------|------|-------|
 | `id` | identifier | Primary key |
-| `content` | string | Raw captured text (text items) or the URL (link items) |
-| `type` | `TEXT` \| `LINK` | Determines the card render variant |
-| `url` | string \| null | Populated for link items |
-| `title` | string \| null | Extracted webpage title; `null` when extraction failed (fallback to raw link) |
+| `content` | string | Raw captured input, verbatim — free text or a URL; there is no separate stored `type`/`url` field, the shape of `content` is only inspected at refine time (see Business Rules) |
+| `title` | string \| null | Set only during refine/triage — from a web suggestion or manual entry; `null` until the item is refined |
 | `category` | `MOVIE` \| `BOOK` \| `GAME` \| `ARTICLE` \| null | `null` while the item is still in the Inbox |
-| `status` | `INBOX` \| `ORGANIZED` | Drives Inbox vs Vault placement |
-| `createdAt` | timestamp | Sort key — lists are newest-first |
+| `year` | number \| null | Release/publication year; refined via triage, from a suggestion or manual entry; `null` until set |
+| `creator` | string \| null | Author / director / developer, depending on category; refined via triage; `null` until set |
+| `description` | string \| null | Short synopsis/summary; refined via triage; `null` until set |
+| `status` | `INBOX` \| `ORGANIZED` | Drives Inbox vs Library placement |
+| `createdAt` | timestamp | Sort key — lists are newest-first by default |
 
 ### Fixed Enumerations (hard-coded — see out-of-scope)
 
-- **MediaType**: `TEXT`, `LINK`
 - **Category**: `MOVIE`, `BOOK`, `GAME`, `ARTICLE`
 - **Status**: `INBOX`, `ORGANIZED`
+
+> There is no `MediaType` enum and no `type`/`url` fields — capture has a single input shape.
+> See `DECISIONS.md` DEC-016.
 
 ## Business Rules (Critical)
 
 Agents MUST respect these when generating code:
 
-- **Link detection is server-authoritative.** The client may detect a URL for instant UX, but
-  the backend re-validates and is the source of truth for `type` and `url`.
-- **Title extraction is best-effort with a mandatory fallback.** If fetching/parsing the page
-  title fails (timeout, non-HTML, error), store/display the **raw link** — never block a capture.
-- **Inbox and Vault are ordered newest-first** (`createdAt DESC`).
-- **Triage is atomic**: tapping a category sets `category` **and** `status = ORGANIZED` in one
+- **Capture is a single, undifferentiated input.** There is no text-vs-link distinction at
+  capture time — `POST` just persists the raw `content` string with `status = INBOX`. No link
+  detection, no title extraction, no suggestion lookup happens at capture.
+- **URL-vs-media branching happens only at refine time.** When the user opens the refine-metadata
+  modal, the backend inspects `content`: if it parses as a URL, it fetches the webpage and
+  extracts title/description; otherwise, it calls the external "determine media" suggestion
+  lookup (movie/book/game/article). Both branches are best-effort (see next rule).
+- **Web suggestions are best-effort and never block refine/triage.** If the URL fetch or media
+  lookup fails, is slow, or returns nothing, the refine-metadata modal must still open with
+  empty/editable fields — a failed or missing suggestion never blocks triage or capture.
+  (External provider(s) TBD — see `DECISIONS.md` DEC-016.)
+- **Inbox and Library are ordered newest-first by default** (`createdAt DESC`); the Library also
+  supports explicit sort selection (see Library filter feature below).
+- **Triage is atomic and metadata-carrying**: validating an item in the refine-metadata modal sets
+  `category`, `title`, `year`, `creator`, `description`, **and** `status = ORGANIZED` in one
   action, which removes the item from the Inbox result set.
-- **Delete is permanent and immediate** — a single action, no soft-delete, no trash bin.
+- **Delete is permanent and immediate** — a single inline action on the Inbox card, independent of
+  the refine-metadata modal, no soft-delete, no trash bin.
 - **Categories are a closed set.** Only the four fixed categories exist; do not add custom or
   user-defined categories.
 
@@ -61,10 +74,12 @@ Agents MUST respect these when generating code:
 
 | Feature | Description |
 |---------|-------------|
-| **All-Capture Bar** | Prominent top-of-layout input accepting text; auto-detects links. |
-| **Inbox** | Default screen listing unorganized items, newest first, as text or rich-link cards. |
-| **Triage** | Per-card row of four category buttons + a delete action. |
-| **Sorted Vault** | Secondary screen listing organized items with an `All / Movies / Books / Games / Articles` filter dropdown. |
+| **All-Capture Bar** | Prominent top-of-layout input accepting any free-form text or URL — a single, undifferentiated capture; no client/server type branching at capture time. |
+| **Inbox** | Default screen listing unorganized items, newest first, as uniform cards; content that looks like a URL is cosmetically auto-linkified client-side for display only (no stored field, no business meaning). |
+| **Refine & Triage Modal** | Tapping an Inbox card triggers the backend's best-effort suggestion lookup (URL → fetch webpage; otherwise → "determine media" lookup) and opens a modal showing the raw capture and any suggestions, with editable fields (category, title, year, creator, description). A **Validate** action commits the refined metadata and moves the item to the Library. |
+| **Delete** | Inline action on the Inbox card, separate from the modal. |
+| **Library** *(previously "Vault")* | Secondary screen listing organized items with their full refined metadata, with an `All / Movies / Books / Games / Articles` category filter and a sort filter (newest/oldest by capture date, newest/oldest by year, title A–Z/Z–A). |
+| **Bottom Navbar** | Fixed navigation bar for switching between Inbox and Library. |
 
 ## Explicitly Out of Scope (MVP)
 
@@ -73,7 +88,8 @@ Deferred to post-MVP — do **not** build these, and do not add code paths for t
 - User registration, login, profiles, or account management (**no auth**).
 - Image attachments, photo uploads, or camera integration (**no file storage**).
 - User-created custom categories (**category enum is closed**).
-- Website thumbnail imagery or branding icons on link cards (**title text only**).
+- Website thumbnail imagery, poster art, or branding icons on cards (**text metadata only** —
+  web suggestions return text fields such as title/year/creator/description, never images).
 
 ## Environments
 

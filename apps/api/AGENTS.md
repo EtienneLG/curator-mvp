@@ -31,7 +31,8 @@ Read and follow `../../docs/AI-RULES.md` for operational guidance covering:
 - Routes/handlers are thin: validate → delegate → respond.
 - TypeScript strict, never `any`, Zod for all validation and DTO inference.
 - All Prisma/DB access lives in repositories — never in handlers or services.
-- Link-title extraction is best-effort with a mandatory raw-link fallback (see DEC-012).
+- Metadata suggestions are resolved only at refine time (never at capture) and are best-effort
+  with a mandatory empty-result fallback (see DEC-016).
 - Pino logger only — never `console.log`.
 - Prefer unit tests for logic and error handling over broad endpoint suites.
 - Run `npm test` after every change.

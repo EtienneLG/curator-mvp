@@ -8,8 +8,9 @@ larger test suite is not automatically a better one.
 ## Core Principles
 
 - Test **behavior**, not implementation details.
-- Prioritize the code that carries real risk: link detection, title-extraction fallback, the
-  triage lifecycle transition, and Vault filtering.
+- Prioritize the code that carries real risk: the suggestions branch (URL fetch vs. media
+  lookup), its best-effort fallback, the triage lifecycle transition, and Library
+  filtering/sorting.
 - Tests must be **deterministic** — no flaky, time-based waits.
 - Every meaningful behavior change ships with tests.
 
@@ -17,10 +18,10 @@ larger test suite is not automatically a better one.
 
 | Area | Why it matters |
 |------|----------------|
-| **Link detection** | Text vs link classification drives card rendering and title extraction. |
-| **Title extraction fallback** | Must degrade to the raw link on fetch/parse failure — never block a capture. |
-| **Triage transition** | `PATCH` must set `category` + `status = ORGANIZED` and remove the item from the Inbox. |
-| **Inbox/Vault ordering & filtering** | Newest-first ordering and per-category Vault filtering. |
+| **Suggestions branch (URL vs. media lookup)** | `content` shape decides whether `suggestions.service` fetches a webpage or calls the external media lookup — both branches must be exercised. |
+| **Web-suggestions fallback** | A failed/slow/empty suggestion lookup must never block the refine-metadata modal from opening or being submitted. |
+| **Triage transition** | `PATCH` must set `category`, `title`, `year`, `creator`, `description` + `status = ORGANIZED` and remove the item from the Inbox. |
+| **Inbox/Library ordering, filtering & sorting** | Newest-first default ordering, per-category Library filtering, and the date/year/title sort options. |
 | **Delete** | Permanent, immediate removal. |
 
 ---
@@ -31,10 +32,13 @@ larger test suite is not automatically a better one.
 - **Vitest** (runner) + **React Testing Library** + **MSW** (network mocking) + **user-event**.
 
 ### What to Test
-- **Component tests** (co-located, e.g., `LinkCard.test.tsx`): render text vs link cards,
-  category selector triggers the triage callback, delete button triggers deletion.
-- **Hook tests**: `useInboxItems` / `useVaultItems` fetch and cache; `useCaptureItem` mutation
-  invalidates the Inbox; optimistic removal on triage/delete.
+- **Component tests** (co-located, e.g., `ItemCard.test.tsx`): render the unified card (with
+  cosmetic client-side link styling when `content` looks like a URL), the refine-metadata modal
+  opens on card tap and pre-fills suggestions, its **Validate** action triggers triage with the
+  edited fields, delete button triggers deletion.
+- **Hook tests**: `useInboxItems` / `useLibraryItems` fetch and cache; `useCaptureItem` mutation
+  invalidates the Inbox; `useSuggestions` handles the best-effort fetch (including
+  failure/empty-result cases); optimistic removal on triage/delete.
 - **MSW handlers** mock `apps/api` endpoints at the network level (never mock modules).
 
 ### Rules
@@ -71,26 +75,29 @@ describe('CategorySelector', () => {
 - **Vitest** for unit + focused integration. **Fastify `app.inject()`** for HTTP integration.
 
 ### What to Test First
-- **Unit — services**: link detection, `link-metadata.service` fallback behavior, triage rules.
-  Mock the repository and outbound fetch.
-- **Focused integration**: repository + SQLite interaction (ordering, filtering); Fastify error
-  mapping for a business exception; the capture → title-resolution path with a mocked fetch.
+- **Unit — services**: `suggestions.service` branch selection (URL → page fetch, else → media
+  lookup) and its best-effort fallback (failure/timeout/empty result never throws, only ever
+  returns partial/empty suggestions); `items.service` triage rules (atomic multi-field update);
+  capture (`items.service.capture`) does a plain persist with no side effects. Mock the
+  repository and outbound fetch.
+- **Focused integration**: repository + SQLite interaction (ordering, category filtering, sort
+  options); Fastify error mapping for a business exception; the refine flow
+  (`GET /items/{id}/suggestions`) with a mocked fetch/external API for both branches.
 
 ```typescript
 import { describe, expect, it, vi } from 'vitest';
-import { ItemsService } from '../../src/services/items.service';
+import { SuggestionsService } from '../../src/services/suggestions.service';
 
-describe('ItemsService', () => {
-  it('falls back to the raw link when title extraction fails', async () => {
-    const repo = { create: vi.fn(async (x) => x) };
-    const metadata = { fetchTitle: vi.fn().mockRejectedValue(new Error('timeout')) };
-    const service = new ItemsService(repo as any, metadata as any);
+describe('SuggestionsService', () => {
+  it('falls back to an empty suggestion when the URL fetch fails', async () => {
+    const fetcher = { fetchPage: vi.fn().mockRejectedValue(new Error('timeout')) };
+    const mediaLookup = { search: vi.fn() };
+    const service = new SuggestionsService(fetcher as any, mediaLookup as any);
 
-    const item = await service.capture({ content: 'https://example.com' });
+    const suggestion = await service.suggest({ content: 'https://example.com' });
 
-    expect(item.type).toBe('LINK');
-    expect(item.title).toBeNull();
-    expect(item.url).toBe('https://example.com');
+    expect(suggestion.title).toBeNull();
+    expect(mediaLookup.search).not.toHaveBeenCalled();
   });
 });
 ```
@@ -98,7 +105,8 @@ describe('ItemsService', () => {
 ### Rules
 - Arrange / Act / Assert; clear mocks in `afterEach`.
 - Prefer `app.inject()` over browser-like E2E stacks.
-- `describe('ItemsService')` for units, `describe('[PATCH /items/:id]')` for HTTP integration.
+- `describe('ItemsService')` / `describe('SuggestionsService')` for units,
+  `describe('[PATCH /items/:id]')` for HTTP integration.
 
 ### Do NOT Test (Backend)
 - Thin handlers whose only job is validate → delegate → respond.

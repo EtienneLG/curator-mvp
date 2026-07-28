@@ -34,8 +34,9 @@ speculative layers, abstractions, or infrastructure.
 │                                                              │
 │   Route ──► Handler ──► Service ──► Repository               │
 │                           │                                  │
-│                           └─► linkMetadata.service           │
-│                               (fetch + parse <title>)        │
+│                           └─► suggestions.service            │
+│                               (URL → fetch page; else →      │
+│                                external media lookup)        │
 └────────────────────────────────────┬────────────────────────┘
                                       │  Prisma
                                       ▼
@@ -72,10 +73,10 @@ speculative layers, abstractions, or infrastructure.
 
 | State | Tool | Example in Curator |
 |-------|------|--------------------|
-| Server state | TanStack Query | Inbox list, Vault list, capture/triage/delete mutations |
-| Global client state | Zustand | Active Vault filter, capture-bar input buffer |
+| Server state | TanStack Query | Inbox list, Library list, capture/triage/delete mutations, web-suggestions lookup |
+| Global client state | Zustand | Active Library filters (category + sort), capture-bar input buffer, refine-metadata modal state |
 | Local component state | `useState` | Transient toggles inside a single card |
-| URL state | `useSearchParams` | (optional) Vault filter reflected in the URL |
+| URL state | `useSearchParams` | (optional) Library category/sort filters reflected in the URL |
 
 ### Data Flow
 
@@ -126,8 +127,10 @@ A **simple layered structure** (not clean/hexagonal — the domain is a single e
 ├────────────────────────────────────────────┤
 │ Handlers  — HTTP ↔ application mapping     │  thin: validate → delegate → respond
 ├────────────────────────────────────────────┤
-│ Services  — business rules                 │  capture / triage / delete / list
-│             linkMetadata.service           │  fetch URL + parse <title> (fallback)
+│ Services  — business rules                 │  capture (raw persist) / triage / delete / list
+│             suggestions.service            │  best-effort lookup at refine time: URL → fetch
+│                                             │  page; else → external media lookup (provider TBD,
+│                                             │  DEC-016)
 ├────────────────────────────────────────────┤
 │ Repository— Prisma data access             │  ordering, filtering, persistence
 └────────────────────────────────────────────┘
@@ -136,21 +139,42 @@ A **simple layered structure** (not clean/hexagonal — the domain is a single e
 ### Non-Negotiable Boundaries
 
 1. **Handlers are thin**: validate input, call a service, send the response.
-2. **Services own business logic**: link detection, title resolution, lifecycle transitions.
-3. **Repository owns persistence**: all Prisma access, `ORDER BY createdAt DESC`, Vault filters.
+2. **Services own business logic**: refine-time suggestion lookup (URL fetch vs. media lookup),
+   lifecycle transitions. Capture itself has no business logic — it only validates and persists.
+3. **Repository owns persistence**: all Prisma access, `ORDER BY createdAt DESC`, Library
+   category/sort filters.
 4. **Zod validates every boundary**: body, params, query, and external (fetched HTML is treated
    as untrusted — only the parsed title is used).
 5. **Business failures are typed exceptions** mapped by a centralized Fastify error handler.
 6. **No gratuitous layers.** No clean-architecture ceremony, no generic repository abstractions.
 
-### Request Flow (capture a link)
+### Request Flow (capture)
 
-1. `POST /items` hits a Fastify route with Zod validation.
+1. `POST /items` hits a Fastify route with Zod validation of `content` only.
 2. Handler extracts typed input and delegates to `items.service`.
-3. Service detects a link, calls `linkMetadata.service` to resolve the `<title>`; on any failure
-   it falls back to the raw link (`title = null`).
-4. Repository persists the `MediaItem` via Prisma with `status = INBOX`.
-5. Response returns; the client invalidates the Inbox query so it re-renders newest-first.
+3. Service persists the `MediaItem` via the repository with `status = INBOX` — **no** link
+   detection, title extraction, or suggestion lookup happens here; `title`/`category`/`year`/
+   `creator`/`description` remain `null`.
+4. Response returns; the client invalidates the Inbox query so it re-renders newest-first.
+
+### Request Flow (opening the refine-metadata modal)
+
+1. User taps an Inbox card; the client calls `GET /items/{id}/suggestions`.
+2. `suggestions.service` inspects the item's `content`: if it parses as a URL, it fetches the
+   page and extracts title/description; otherwise, it calls the external "determine media"
+   lookup (provider TBD, DEC-016) to suggest category/title/year/creator/description.
+   Either branch is best-effort — any failure returns an empty/partial result, never an error
+   that blocks the modal.
+3. The modal opens with the raw capture + suggestions, letting the user edit category/title/
+   year/creator/description.
+
+### Request Flow (validate/triage from the modal)
+
+1. On **Validate**, `PATCH /items/{id}` sends the refined fields.
+2. Service applies them atomically: `category`, `title`, `year`, `creator`, `description`, and
+   `status = ORGANIZED` in one write.
+3. Repository persists the update; response returns; the client invalidates both the Inbox and
+   Library queries so the item disappears from the Inbox and appears in the Library.
 
 ### Error Flow
 
@@ -171,10 +195,11 @@ A **simple layered structure** (not clean/hexagonal — the domain is a single e
 
 | Method | Path | Purpose |
 |--------|------|---------|
-| `POST` | `/items` | Capture a new item (text or link); server resolves title, sets `status = INBOX` |
+| `POST` | `/items` | Capture a new item — persists raw `content` verbatim, sets `status = INBOX`; no link detection or metadata resolution happens here |
 | `GET` | `/items?status=inbox` | List Inbox items, `createdAt DESC` |
-| `GET` | `/items?status=organized&category={cat}` | List Vault items; `category` omitted ⇒ "All" |
-| `PATCH` | `/items/{id}` | Triage: set `category` + `status = ORGANIZED` |
+| `GET` | `/items?status=organized&category={cat}&sort={sort}` | List Library items; `category` omitted ⇒ "All"; `sort` ∈ `createdAt:desc\|createdAt:asc\|year:desc\|year:asc\|title:asc\|title:desc` (default `createdAt:desc`) |
+| `GET` | `/items/{id}/suggestions` | Best-effort metadata suggestions for an Inbox item, to prefill the refine-metadata modal: if `content` is a URL, fetches the page (title/description); otherwise calls the external "determine media" lookup (title/year/creator/description). Provider TBD (DEC-016) |
+| `PATCH` | `/items/{id}` | Triage: set `category`, `title`, `year`, `creator`, `description` + `status = ORGANIZED` |
 | `DELETE` | `/items/{id}` | Permanently delete an item |
 
 ---
@@ -184,11 +209,15 @@ A **simple layered structure** (not clean/hexagonal — the domain is a single e
 - **Prisma** is the single source of truth for the schema (`prisma/schema.prisma`).
 - **SQLite** for the MVP (zero-config, single file). All schema changes go through committed
   Prisma migrations.
-- The `MediaItem` model + `MediaType` / `Category` / `Status` enums mirror `PROJECT.md`.
+- The `MediaItem` model + `Category` / `Status` enums mirror `PROJECT.md`. There is no
+  `MediaType` enum and no `type`/`url` columns (see DEC-016).
 - **PostgreSQL migration** later is a `provider` + `DATABASE_URL` change, not a rewrite.
 
 ## Complexity Guardrails
 
 - No RxJS, event buses, Redux, or generic repository/adapter layers.
 - No auth, upload, or thumbnail infrastructure (out of scope).
+- The web-suggestions external dependency is scoped to text metadata only (title/year/creator/
+  description) — no image/poster fetching or storage; provider selection is a separate decision
+  (see `DECISIONS.md` DEC-016), not to be added speculatively.
 - Prefer explicit, boring code over clever abstractions.

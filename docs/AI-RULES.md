@@ -47,7 +47,7 @@ curator/
 
 - **Components are UI-only. All logic lives in custom hooks** (the #1 rule).
 - TanStack Query for ALL server state — never `useEffect` + `useState` fetching.
-- Zustand for global client state (Vault filter, capture input); `useState` for local only.
+- Zustand for global client state (Library filters, capture input); `useState` for local only.
 - Tailwind, mobile-first; no inline styles for static values.
 - Named exports; PascalCase components; `use`-prefixed hooks.
 - Optimistic updates for triage/delete so cards disappear instantly.
@@ -60,7 +60,8 @@ curator/
 - Typed business exceptions + centralized error handler; response shape
   `{ error: { code, message, details } }`.
 - Pino only — never `console.log`.
-- Link-title extraction is best-effort with a **mandatory raw-link fallback** (DEC-012).
+- Metadata suggestions (title/year/creator/description) are resolved only at refine time, never
+  at capture, and are best-effort with a mandatory empty-result fallback (DEC-016).
 
 ## Common Tasks
 

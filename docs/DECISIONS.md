@@ -21,7 +21,7 @@ for a two-package project.
 **Status:** Accepted
 **Date:** 2026-07-24
 **Decision:** React 18+ with TypeScript strict, built with Vite as an SPA.
-**Why:** Minimal boilerplate for a small CRUD app; TanStack Query maps the Inbox/Vault screens
+**Why:** Minimal boilerplate for a small CRUD app; TanStack Query maps the Inbox/Library screens
 directly; the same TS + Zod as the backend.
 **Do not:** Use Next.js / App Router, or class components.
 
@@ -30,8 +30,8 @@ directly; the same TS + Zod as the backend.
 **Date:** 2026-07-24
 **Decision:** Fastify with a simple layered structure: `routes/handlers → services →
 repository`, plus shared plugins. No clean/hexagonal architecture.
-**Why:** The domain is a single entity with one non-trivial concern (title extraction). Clean
-architecture would be pure overhead here.
+**Why:** The domain is a single entity with one non-trivial concern (refine-time metadata
+suggestions). Clean architecture would be pure overhead here.
 **Do not:** Introduce Express/NestJS, or add manager/facade/use-case/generic-repository layers.
 
 ## DEC-004 — Database: SQLite via Prisma, PostgreSQL-Ready
@@ -56,8 +56,8 @@ across the client/server split. Hand-maintained duplicate types drift.
 ## DEC-006 — Server State: TanStack Query; Client State: Zustand
 **Status:** Accepted
 **Date:** 2026-07-24
-**Decision:** TanStack Query owns all server state (Inbox/Vault lists, capture/triage/delete
-mutations with optimistic updates). Zustand owns the little UI state (Vault filter, input buffer).
+**Decision:** TanStack Query owns all server state (Inbox/Library lists, capture/triage/delete
+mutations with optimistic updates). Zustand owns the little UI state (Library filters, input buffer).
 **Why:** Clear separation, minimal boilerplate, optimistic updates give the instant triage UX the
 PRD requires.
 **Do not:** Fetch server data with `useEffect` + `useState`; use Redux/MobX; use Zustand for
@@ -99,26 +99,20 @@ hooks.
 **Status:** Accepted
 **Date:** 2026-07-24
 **Decision:** Vitest across both workspaces. Backend: unit-test services + focused integration
-via `app.inject()`. Frontend: RTL + MSW, test behavior, co-located tests. Prioritize link
-detection, title fallback, triage transition, and Vault filtering.
+via `app.inject()`. Frontend: RTL + MSW, test behavior, co-located tests. Prioritize the
+suggestions branch (URL fetch vs. media lookup), its best-effort fallback, triage transition,
+and Library filtering/sorting.
 **Why:** These paths carry the real risk; route-by-route E2E suites are brittle and low value.
 **Do not:** Build a full endpoint E2E suite, Playwright, or Gherkin/BDD by default.
 
-## DEC-012 — Link Title Extraction Is Best-Effort with a Mandatory Fallback
-**Status:** Accepted
-**Date:** 2026-07-24
-**Decision:** The backend fetches a submitted URL and parses its `<title>` with a short timeout.
-Any failure falls back to storing/displaying the raw link (`title = null`). Fetched HTML is
-treated as untrusted; only the parsed title string is used.
-**Why:** Capture must never be blocked or fail because a remote page is slow or malformed (PRD).
-**Do not:** Make a capture depend on successful extraction; render thumbnails or fetch images.
-
 ## DEC-013 — Explicitly Deferred (Out of Scope for the MVP)
-**Status:** Accepted
+**Status:** Accepted (amended by DEC-016)
 **Date:** 2026-07-24
 **Decision:** No authentication/accounts, no image/upload/camera, no custom categories (closed
-enum), no link thumbnails. Also deferred: i18n, Docker/nginx/BFF proxy, analytics/monitoring
-SDKs, and multi-environment deploy pipelines.
+enum), no link/media thumbnails or poster art. Also deferred: i18n, Docker/nginx/BFF proxy,
+analytics/monitoring SDKs, and multi-environment deploy pipelines. **Amended by DEC-016:**
+text-based web metadata suggestions (title/year/creator/description) are in-scope — only
+un-defers *text* metadata lookup; images/thumbnails/posters remain deferred.
 **Why:** Protect the MVP timeline (PRD §4).
 **Do not:** Add code paths, dependencies, or schema fields for these without an explicit new
 decision recorded here.
@@ -144,6 +138,47 @@ errors to the same `{ error: { code: 'VALIDATION_ERROR', ... } }` shape).
 validation going forward — attach the schema to the route instead. Do not downgrade to
 `fastify-type-provider-zod@^4` (Zod v3 only) or bypass the type provider's validator/serializer
 compilers.
+
+## DEC-015 — Rename "Vault" to "Library"
+**Status:** Accepted
+**Date:** 2026-07-28
+**Decision:** Renamed the second main screen from "Vault" to "Library" everywhere: docs, the
+`/vault` route (→ `/library`), component/hook/file names, Zustand store fields, and TanStack
+Query keys (`['items', 'vault', ...]` → `['items', 'library', ...]`).
+**Why:** Naming change requested by the product owner; used pervasively enough to track so
+agents don't reintroduce "Vault" in new code.
+**Do not:** Leave mixed naming (e.g., a `LibraryView` importing from a `vault/` folder) — this is
+a full rename, not an alias.
+
+## DEC-016 — Refine-Time Web Suggestions & Unified Capture Input (external provider TBD)
+**Status:** Proposed
+**Date:** 2026-07-28
+**Decision:** `MediaItem` has no `type`/`url` fields or `MediaType` enum — `content` is the only
+captured input (free text or URL, no upfront distinction), and `POST /items` is a pure
+validate-and-persist operation with no link detection or metadata lookup. All metadata
+resolution happens later, in `suggestions.service`, triggered only when the user opens the
+refine-metadata modal (`GET /items/{id}/suggestions`): if `content` parses as a URL, fetch the
+page and extract title/description; otherwise, call an external "determine media" lookup to
+suggest category/title/year/creator/description. Both branches are best-effort — any failure
+(timeout, malformed response, no match) returns an empty/partial suggestion and never blocks the
+modal or triage. Suggestion fields are plain text only (no images/posters/thumbnails). Which
+external API(s) power the media-lookup branch — one general-purpose provider vs.
+category-specific providers (movies/books/games/articles) — is **not yet decided** and must be
+resolved before implementation. The Inbox card UI is a single `ItemCard` (no `TextCard`/
+`LinkCard` split); it may still cosmetically auto-linkify URL-shaped `content` client-side, but
+this is presentational only.
+**Why:** The product needs richer per-item metadata (year/creator/description) and computed
+"suggestions from the web" to reduce manual triage entry, without treating text vs. link as a
+first-class capture-time concept — URL-shape only matters when choosing a suggestion source.
+This simplifies the schema (drops `type`/`url`/`MediaType`), consolidates the former
+capture-time link-title-extraction logic into one refine-time service, and removes a
+card-rendering branch. It also introduces a new external dependency, which per `AI-RULES.md`
+requires an explicit decision rather than silent addition.
+**Do not:** Reintroduce `type`/`url` as stored fields or branch on them at capture time. Do not
+run any network fetch during `POST /items`. Do not keep `TextCard`/`LinkCard` as separate
+components. Do not pick/wire up a specific external API without recording the choice here
+first. Do not let a failed/slow suggestion lookup block capture or triage. Do not fetch or store
+images/thumbnails as part of this feature — remains out of scope per DEC-013.
 
 ---
 
