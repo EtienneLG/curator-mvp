@@ -19,12 +19,27 @@ function RouteErrorBoundary() {
 
 const router = createBrowserRouter([
   {
-    path: '/',
     lazy: async () => {
-      const { InboxPage } = await import('./InboxPage');
-      return { Component: InboxPage };
+      const { AppLayout } = await import('../components/layout/AppLayout');
+      return { Component: AppLayout };
     },
     errorElement: <RouteErrorBoundary />,
+    children: [
+      {
+        index: true,
+        lazy: async () => {
+          const { InboxPage } = await import('./InboxPage');
+          return { Component: InboxPage };
+        },
+      },
+      {
+        path: 'vault',
+        lazy: async () => {
+          const { VaultPage } = await import('./VaultPage');
+          return { Component: VaultPage };
+        },
+      },
+    ],
   },
 ]);
 

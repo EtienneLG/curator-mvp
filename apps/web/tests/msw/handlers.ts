@@ -31,14 +31,37 @@ export const inboxItemsFixture: MediaItem[] = [
   },
 ];
 
-// In-memory fake "database", seeded from the fixture above. Mutated by
+export const vaultItemsFixture: MediaItem[] = [
+  {
+    id: '3',
+    content: 'Dune',
+    type: 'TEXT',
+    url: null,
+    title: null,
+    category: 'BOOK',
+    status: 'ORGANIZED',
+    createdAt: new Date('2026-01-04T10:00:00.000Z'),
+  },
+  {
+    id: '4',
+    content: 'https://example.com/movie',
+    type: 'LINK',
+    url: 'https://example.com/movie',
+    title: 'Example Movie',
+    category: 'MOVIE',
+    status: 'ORGANIZED',
+    createdAt: new Date('2026-01-03T10:00:00.000Z'),
+  },
+];
+
+// In-memory fake "database", seeded from the fixtures above. Mutated by
 // PATCH/DELETE so that a subsequent GET reflects prior mutations, mirroring
 // real backend behavior for cache-invalidation-driven tests.
 let itemsDb: MediaItem[] = [];
 
-/** Resets the fake DB to the fixture — call from `afterEach` in test setup. */
+/** Resets the fake DB to the fixtures — call from `afterEach` in test setup. */
 export function resetInboxItemsDb() {
-  itemsDb = inboxItemsFixture.map((item) => ({ ...item }));
+  itemsDb = [...inboxItemsFixture, ...vaultItemsFixture].map((item) => ({ ...item }));
 }
 
 resetInboxItemsDb();
@@ -49,6 +72,10 @@ export const handlers: HttpHandler[] = [
 
     if (status === 'inbox') {
       return HttpResponse.json(itemsDb.filter((item) => item.status === 'INBOX'));
+    }
+
+    if (status === 'organized') {
+      return HttpResponse.json(itemsDb.filter((item) => item.status === 'ORGANIZED'));
     }
 
     return HttpResponse.json([]);
