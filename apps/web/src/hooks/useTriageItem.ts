@@ -1,27 +1,28 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 
-import { triageItem } from '../services/item.service';
-import type { Category, MediaItem } from '../types/media-item.types';
+import { triageItem, type TriageItemInput } from '../services/item.service';
+import type { MediaItem } from '../types/media-item.types';
 
 const INBOX_QUERY_KEY = ['items', 'inbox'];
 
 interface UseTriageItemResult {
-  triage: (variables: { id: string; category: Category }) => void;
+  triage: (variables: { id: string; input: TriageItemInput }) => void;
   isLoading: boolean;
   error: Error | null;
 }
 
 /**
- * Triage sets `category` + `status = ORGANIZED` in one atomic action, which
- * removes the item from the Inbox result set (docs/PROJECT.md → Business
- * Rules). Optimistically drops the card from the `['items', 'inbox']` cache
- * for instant UX, rolling back on failure (see AGENTS.md → Hooks Rules).
+ * Triage sets `category`, `title`, `year`, `creator`, `description` and
+ * `status = ORGANIZED` in one atomic action, which removes the item from
+ * the Inbox result set (docs/PROJECT.md → Business Rules). Optimistically
+ * drops the card from the `['items', 'inbox']` cache for instant UX, rolling
+ * back on failure (see AGENTS.md → Hooks Rules).
  */
 export function useTriageItem(): UseTriageItemResult {
   const queryClient = useQueryClient();
 
   const mutation = useMutation({
-    mutationFn: ({ id, category }: { id: string; category: Category }) => triageItem(id, category),
+    mutationFn: ({ id, input }: { id: string; input: TriageItemInput }) => triageItem(id, input),
     onMutate: async ({ id }) => {
       await queryClient.cancelQueries({ queryKey: INBOX_QUERY_KEY });
 

@@ -12,20 +12,22 @@ export const inboxItemsFixture: MediaItem[] = [
   {
     id: '1',
     content: 'Remember to buy milk',
-    type: 'TEXT',
-    url: null,
     title: null,
     category: null,
+    year: null,
+    creator: null,
+    description: null,
     status: 'INBOX',
     createdAt: new Date('2026-01-02T10:00:00.000Z'),
   },
   {
     id: '2',
     content: 'https://example.com/article',
-    type: 'LINK',
-    url: 'https://example.com/article',
-    title: 'Example Article',
+    title: null,
     category: null,
+    year: null,
+    creator: null,
+    description: null,
     status: 'INBOX',
     createdAt: new Date('2026-01-01T10:00:00.000Z'),
   },
@@ -35,20 +37,22 @@ export const libraryItemsFixture: MediaItem[] = [
   {
     id: '3',
     content: 'Dune',
-    type: 'TEXT',
-    url: null,
-    title: null,
+    title: 'Dune',
     category: 'BOOK',
+    year: 1965,
+    creator: 'Frank Herbert',
+    description: 'A science fiction novel.',
     status: 'ORGANIZED',
     createdAt: new Date('2026-01-04T10:00:00.000Z'),
   },
   {
     id: '4',
     content: 'https://example.com/movie',
-    type: 'LINK',
-    url: 'https://example.com/movie',
     title: 'Example Movie',
     category: 'MOVIE',
+    year: 2020,
+    creator: 'A Director',
+    description: 'A short synopsis.',
     status: 'ORGANIZED',
     createdAt: new Date('2026-01-03T10:00:00.000Z'),
   },
@@ -82,7 +86,13 @@ export const handlers: HttpHandler[] = [
   }),
 
   http.patch('*/items/:id', async ({ params, request }) => {
-    const body = (await request.json()) as { category: string };
+    const body = (await request.json()) as {
+      category: string;
+      title: string;
+      year: number | null;
+      creator: string | null;
+      description: string | null;
+    };
     const index = itemsDb.findIndex((existing) => existing.id === params.id);
     const existing = itemsDb[index];
 
@@ -93,6 +103,10 @@ export const handlers: HttpHandler[] = [
     const updated: MediaItem = {
       ...existing,
       category: body.category as MediaItem['category'],
+      title: body.title,
+      year: body.year,
+      creator: body.creator,
+      description: body.description,
       status: 'ORGANIZED',
     };
     itemsDb[index] = updated;
@@ -103,8 +117,7 @@ export const handlers: HttpHandler[] = [
   http.delete('*/items/:id', ({ params }) => {
     itemsDb = itemsDb.filter((item) => item.id !== params.id);
 
-    // Respond with a JSON body (not 204) so `apiFetch`'s `response.json()`
-    // call always has something to parse.
-    return HttpResponse.json({}, { status: 200 });
+    // Mirror the real backend's 204 No Content (see `apiFetch`'s no-body handling).
+    return new HttpResponse(null, { status: 204 });
   }),
 ];

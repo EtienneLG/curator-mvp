@@ -10,20 +10,22 @@ const seedItems: MediaItem[] = [
   {
     id: '1',
     content: 'Remember to buy milk',
-    type: 'TEXT',
-    url: null,
     title: null,
     category: null,
+    year: null,
+    creator: null,
+    description: null,
     status: 'INBOX',
     createdAt: new Date('2026-01-02T10:00:00.000Z'),
   },
   {
     id: '2',
     content: 'https://example.com/article',
-    type: 'LINK',
-    url: 'https://example.com/article',
-    title: 'Example Article',
+    title: null,
     category: null,
+    year: null,
+    creator: null,
+    description: null,
     status: 'INBOX',
     createdAt: new Date('2026-01-01T10:00:00.000Z'),
   },
@@ -37,7 +39,16 @@ describe('useTriageItem', () => {
     const { result } = renderHook(() => useTriageItem(), { wrapper: Wrapper });
 
     act(() => {
-      result.current.triage({ id: '1', category: 'BOOK' });
+      result.current.triage({
+        id: '1',
+        input: {
+          category: 'BOOK',
+          title: 'A Great Book',
+          year: 2020,
+          creator: 'An Author',
+          description: 'A short synopsis',
+        },
+      });
     });
 
     await waitFor(() => {

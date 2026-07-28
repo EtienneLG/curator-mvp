@@ -10,11 +10,6 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-enum MediaType {
-  TEXT
-  LINK
-}
-
 enum Category {
   MOVIE
   BOOK
@@ -28,14 +23,15 @@ enum Status {
 }
 
 model MediaItem {
-  id        String    @id @default(cuid())
-  content   String
-  type      MediaType
-  url       String?
-  title     String?
-  category  Category?
-  status    Status    @default(INBOX)
-  createdAt DateTime  @default(now())
+  id          String    @id @default(cuid())
+  content     String
+  title       String?
+  category    Category?
+  year        Int?
+  creator     String?
+  description String?
+  status      Status    @default(INBOX)
+  createdAt   DateTime  @default(now())
 
   @@index([status, createdAt])
   @@index([status, category, createdAt])

@@ -9,7 +9,7 @@ describe('[POST /items]', () => {
     await prisma.mediaItem.deleteMany();
   });
 
-  it('captures a text item and returns 201', async () => {
+  it('captures an item, persisting only content, and returns 201', async () => {
     const app = await buildApp(loadEnv());
 
     const response = await app.inject({
@@ -20,15 +20,18 @@ describe('[POST /items]', () => {
 
     expect(response.statusCode).toBe(201);
     const body = response.json();
-    expect(body.type).toBe('TEXT');
-    expect(body.url).toBeNull();
+    expect(body.content).toBe('remember to read this');
     expect(body.title).toBeNull();
+    expect(body.category).toBeNull();
+    expect(body.year).toBeNull();
+    expect(body.creator).toBeNull();
+    expect(body.description).toBeNull();
     expect(body.status).toBe('INBOX');
 
     await app.close();
   });
 
-  it('captures a link item, server-detecting type and url', async () => {
+  it('captures a URL-shaped content string as plain content, with no special handling', async () => {
     const app = await buildApp(loadEnv());
 
     const response = await app.inject({
@@ -39,8 +42,8 @@ describe('[POST /items]', () => {
 
     expect(response.statusCode).toBe(201);
     const body = response.json();
-    expect(body.type).toBe('LINK');
-    expect(body.url).toBe('https://example.com/article');
+    expect(body.content).toBe('https://example.com/article');
+    expect(body.status).toBe('INBOX');
 
     await app.close();
   });
@@ -85,9 +88,7 @@ describe('[GET /items]', () => {
     await prisma.mediaItem.create({
       data: {
         content: 'organized note',
-        type: 'TEXT',
-        url: null,
-        title: null,
+        title: 'A Great Article',
         status: 'ORGANIZED',
         category: 'ARTICLE',
       },
@@ -132,7 +133,7 @@ describe('[PATCH /items/:id]', () => {
     await prisma.mediaItem.deleteMany();
   });
 
-  it('triages an item: sets category, status ORGANIZED, and removes it from the Inbox', async () => {
+  it('triages an item: sets all refined fields, status ORGANIZED, and removes it from the Inbox', async () => {
     const app = await buildApp(loadEnv());
 
     const captureResponse = await app.inject({
@@ -145,12 +146,22 @@ describe('[PATCH /items/:id]', () => {
     const response = await app.inject({
       method: 'PATCH',
       url: `/items/${id}`,
-      payload: { category: 'MOVIE' },
+      payload: {
+        category: 'MOVIE',
+        title: 'A Great Movie',
+        year: 2020,
+        creator: 'A Director',
+        description: 'A short synopsis',
+      },
     });
 
     expect(response.statusCode).toBe(200);
     const body = response.json();
     expect(body.category).toBe('MOVIE');
+    expect(body.title).toBe('A Great Movie');
+    expect(body.year).toBe(2020);
+    expect(body.creator).toBe('A Director');
+    expect(body.description).toBe('A short synopsis');
     expect(body.status).toBe('ORGANIZED');
 
     const inboxResponse = await app.inject({ method: 'GET', url: '/items?status=inbox' });
@@ -165,7 +176,7 @@ describe('[PATCH /items/:id]', () => {
     const response = await app.inject({
       method: 'PATCH',
       url: '/items/does-not-exist',
-      payload: { category: 'BOOK' },
+      payload: { category: 'BOOK', title: 'A Book' },
     });
 
     expect(response.statusCode).toBe(404);
@@ -187,11 +198,70 @@ describe('[PATCH /items/:id]', () => {
     const response = await app.inject({
       method: 'PATCH',
       url: `/items/${id}`,
-      payload: { category: 'PODCAST' },
+      payload: { category: 'PODCAST', title: 'A Title' },
     });
 
     expect(response.statusCode).toBe(400);
     expect(response.json().error.code).toBe('VALIDATION_ERROR');
+
+    await app.close();
+  });
+
+  it('returns a 400 validation error when title is missing', async () => {
+    const app = await buildApp(loadEnv());
+
+    const captureResponse = await app.inject({
+      method: 'POST',
+      url: '/items',
+      payload: { content: 'something to triage' },
+    });
+    const { id } = captureResponse.json();
+
+    const response = await app.inject({
+      method: 'PATCH',
+      url: `/items/${id}`,
+      payload: { category: 'BOOK' },
+    });
+
+    expect(response.statusCode).toBe(400);
+    expect(response.json().error.code).toBe('VALIDATION_ERROR');
+
+    await app.close();
+  });
+});
+
+describe('[DELETE /items/:id]', () => {
+  afterEach(async () => {
+    await prisma.mediaItem.deleteMany();
+  });
+
+  it('deletes an existing item and returns 204', async () => {
+    const app = await buildApp(loadEnv());
+
+    const captureResponse = await app.inject({
+      method: 'POST',
+      url: '/items',
+      payload: { content: 'something to delete' },
+    });
+    const { id } = captureResponse.json();
+
+    const response = await app.inject({ method: 'DELETE', url: `/items/${id}` });
+
+    expect(response.statusCode).toBe(204);
+
+    const inboxResponse = await app.inject({ method: 'GET', url: '/items?status=inbox' });
+    expect(inboxResponse.json()).toHaveLength(0);
+
+    await app.close();
+  });
+
+  it('returns a 404 error when the item does not exist', async () => {
+    const app = await buildApp(loadEnv());
+
+    const response = await app.inject({ method: 'DELETE', url: '/items/does-not-exist' });
+
+    expect(response.statusCode).toBe(404);
+    expect(response.json().error.code).toBe('NOT_FOUND');
 
     await app.close();
   });

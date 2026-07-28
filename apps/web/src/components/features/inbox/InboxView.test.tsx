@@ -16,23 +16,40 @@ describe('InboxView', () => {
 
     await waitFor(() => expect(screen.getAllByRole('listitem')).toHaveLength(2));
     expect(screen.getByText('Remember to buy milk')).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: 'Example Article' })).toBeInTheDocument();
   });
 
-  it('removes a card from the list when its category is chosen', async () => {
+  it('opens the refine modal on tap and removes the card once validated', async () => {
     const { Wrapper } = createQueryClientWrapper();
     render(<InboxView />, { wrapper: Wrapper });
 
     await waitFor(() => expect(screen.getAllByRole('listitem')).toHaveLength(2));
 
-    const [firstCard] = screen.getAllByRole('listitem');
-    if (!firstCard) throw new Error('expected at least one listitem');
-    await userEvent.click(within(firstCard).getByRole('button', { name: /movie/i }));
+    await userEvent.click(screen.getByText('Remember to buy milk'));
 
+    const dialog = await screen.findByRole('dialog', { name: /refine metadata/i });
+    await userEvent.selectOptions(within(dialog).getByLabelText(/category/i), 'BOOK');
+    await userEvent.type(within(dialog).getByLabelText(/title/i), 'A Great Book');
+    await userEvent.click(within(dialog).getByRole('button', { name: /validate/i }));
+
+    await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
     await waitFor(() => expect(screen.getAllByRole('listitem')).toHaveLength(1));
   });
 
-  it('removes a card from the list when it is deleted', async () => {
+  it('closes the refine modal without triaging when cancelled', async () => {
+    const { Wrapper } = createQueryClientWrapper();
+    render(<InboxView />, { wrapper: Wrapper });
+
+    await waitFor(() => expect(screen.getAllByRole('listitem')).toHaveLength(2));
+
+    await userEvent.click(screen.getByText('Remember to buy milk'));
+    const dialog = await screen.findByRole('dialog', { name: /refine metadata/i });
+    await userEvent.click(within(dialog).getByRole('button', { name: /cancel/i }));
+
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    expect(screen.getAllByRole('listitem')).toHaveLength(2);
+  });
+
+  it('removes a card from the list when it is deleted, without opening the modal', async () => {
     const { Wrapper } = createQueryClientWrapper();
     render(<InboxView />, { wrapper: Wrapper });
 
@@ -42,6 +59,7 @@ describe('InboxView', () => {
     if (!firstCard) throw new Error('expected at least one listitem');
     await userEvent.click(within(firstCard).getByRole('button', { name: /delete item/i }));
 
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
     await waitFor(() => expect(screen.getAllByRole('listitem')).toHaveLength(1));
   });
 

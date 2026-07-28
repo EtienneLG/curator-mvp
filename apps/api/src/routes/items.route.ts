@@ -2,7 +2,12 @@ import type { FastifyPluginAsync } from 'fastify';
 import type { ZodTypeProvider } from 'fastify-type-provider-zod';
 import { z } from 'zod';
 
-import { createGetItems, createPatchItem, createPostItem } from '../handlers/items.handler.js';
+import {
+  createDeleteItem,
+  createGetItems,
+  createPatchItem,
+  createPostItem,
+} from '../handlers/items.handler.js';
 import { ItemsRepository } from '../repositories/items.repository.js';
 import {
   CaptureItemSchema,
@@ -42,5 +47,14 @@ export const itemsRoute: FastifyPluginAsync = async (app) => {
       }
     },
     createPatchItem(itemsService),
+  );
+
+  app.withTypeProvider<ZodTypeProvider>().delete('/items/:id', {
+      schema: {
+        params: ItemParamsSchema,
+        response: { 204: z.void() }
+      }
+    },
+    createDeleteItem(itemsService),
   );
 };

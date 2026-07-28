@@ -1,20 +1,26 @@
+import { useState } from 'react';
+
 import { useDeleteItem } from '../../../hooks/useDeleteItem';
 import { useInboxItems } from '../../../hooks/useInboxItems';
 import { useTriageItem } from '../../../hooks/useTriageItem';
-import { CategorySelector } from './CategorySelector';
+import type { TriageItemInput } from '../../../services/item.service';
 import { DeleteButton } from './DeleteButton';
 import { ItemCard } from './ItemCard';
+import { RefineMetadataModal } from './RefineMetadataModal';
 
 /**
- * Inbox screen: lists unorganized items newest-first with per-card triage
- * and delete controls. All data fetching/mutation logic lives in the
+ * Inbox screen: lists unorganized items newest-first. Tapping a card opens
+ * the Refine & Triage Modal (docs/PROJECT.md → Core Features); Delete stays
+ * a separate, inline card action, independent of the modal (docs/PROJECT.md
+ * → Business Rules). All data fetching/mutation logic lives in the
  * `useInboxItems`/`useTriageItem`/`useDeleteItem` hooks — this component only
- * renders (see AGENTS.md → #1 Rule).
+ * renders + local UI state (which card's modal is open) (see AGENTS.md → #1 Rule).
  */
 export function InboxView() {
   const { data: items, isLoading, error } = useInboxItems();
   const { triage } = useTriageItem();
   const { deleteItem } = useDeleteItem();
+  const [refiningItemId, setRefiningItemId] = useState<string | null>(null);
 
   if (isLoading) {
     return (
@@ -40,18 +46,37 @@ export function InboxView() {
     );
   }
 
+  const refiningItem = items.find((item) => item.id === refiningItemId) ?? null;
+
+  const handleValidate = (id: string, input: TriageItemInput) => {
+    triage({ id, input });
+    setRefiningItemId(null);
+  };
+
   return (
-    <ul className="flex flex-col gap-3 p-4">
-      {items.map((item) => (
-        <li key={item.id}>
-          <ItemCard item={item}>
-            <div className="flex items-center justify-between gap-2">
-              <CategorySelector onSelect={(category) => triage({ id: item.id, category })} />
-              <DeleteButton onDelete={() => deleteItem(item.id)} />
-            </div>
-          </ItemCard>
-        </li>
-      ))}
-    </ul>
+    <>
+      <ul className="flex flex-col gap-3 p-4">
+        {items.map((item) => (
+          <li key={item.id}>
+            <ItemCard item={item} onClick={() => setRefiningItemId(item.id)}>
+              <div
+                onClick={(event) => event.stopPropagation()}
+                className="flex items-center justify-end gap-2"
+              >
+                <DeleteButton onDelete={() => deleteItem(item.id)} />
+              </div>
+            </ItemCard>
+          </li>
+        ))}
+      </ul>
+
+      {refiningItem && (
+        <RefineMetadataModal
+          item={refiningItem}
+          onValidate={(input) => handleValidate(refiningItem.id, input)}
+          onClose={() => setRefiningItemId(null)}
+        />
+      )}
+    </>
   );
 }

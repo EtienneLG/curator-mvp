@@ -40,3 +40,15 @@ export function createPatchItem(itemsService: ItemsService) {
     reply.status(200).send(item);
   };
 }
+
+// Thin: validate → delegate → respond. Params validation happens at the Fastify layer
+// (route `schema.params`, see routes/items.route.ts) via fastify-type-provider-zod.
+export function createDeleteItem(itemsService: ItemsService) {
+  return async function deleteItem(
+    request: FastifyRequest<{ Params: ItemParams }>,
+    reply: FastifyReply,
+  ) {
+    await itemsService.remove(request.params.id);
+    reply.status(204).send();
+  };
+}

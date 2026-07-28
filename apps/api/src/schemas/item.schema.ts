@@ -8,9 +8,6 @@ import { z } from 'zod';
  * Domain enums for `MediaItem` (see docs/PROJECT.md → Fixed Enumerations).
  * Closed sets — do not add values without an explicit product decision.
  */
-export const MediaTypeSchema = z.enum(['TEXT', 'LINK']);
-export type MediaType = z.infer<typeof MediaTypeSchema>;
-
 export const CategorySchema = z.enum(['MOVIE', 'BOOK', 'GAME', 'ARTICLE']);
 export type Category = z.infer<typeof CategorySchema>;
 
@@ -24,18 +21,20 @@ export type Status = z.infer<typeof StatusSchema>;
 export const MediaItemSchema = z.object({
   id: z.string(),
   content: z.string(),
-  type: MediaTypeSchema,
-  url: z.string().nullable(),
   title: z.string().nullable(),
   category: CategorySchema.nullable(),
+  year: z.number().int().nullable(),
+  creator: z.string().nullable(),
+  description: z.string().nullable(),
   status: StatusSchema,
   createdAt: z.date(),
 });
 
 export type MediaItem = z.infer<typeof MediaItemSchema>;
 
-// Client input for capture: only raw content is supplied. `type`/`url` are server-detected
-// (link detection is server-authoritative) and `status`/`title` are business-owned defaults.
+// Client input for capture: only raw content is supplied. Capture is a single,
+// undifferentiated input — no type/url branching happens at capture time (docs/PROJECT.md).
+// `status`/`title` (and the rest of the refined metadata) are business-owned defaults.
 export const CaptureItemSchema = z.object({
   content: z.string().trim().min(1, 'content is required'),
 });
@@ -61,10 +60,16 @@ export const ItemParamsSchema = z.object({
 
 export type ItemParams = z.infer<typeof ItemParamsSchema>;
 
-// Triage: tapping a category sets `category` and `status = ORGANIZED` atomically
-// (docs/PROJECT.md — Triage business rule). Only the closed `Category` set is accepted.
+// Triage: validating the refine-metadata modal sets `category`, `title`, `year`, `creator`,
+// `description`, and `status = ORGANIZED` atomically (docs/PROJECT.md — Triage business rule).
+// Only the closed `Category` set is accepted. `title` is always set at triage (from manual
+// entry); `year`/`creator`/`description` are optional/nullable since not every item has them.
 export const TriageItemSchema = z.object({
   category: CategorySchema,
+  title: z.string().trim().min(1, 'title is required'),
+  year: z.number().int().nullable().optional(),
+  creator: z.string().trim().nullable().optional(),
+  description: z.string().trim().nullable().optional(),
 });
 
 export type TriageItemInput = z.infer<typeof TriageItemSchema>;

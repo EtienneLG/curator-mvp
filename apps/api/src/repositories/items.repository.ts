@@ -1,14 +1,19 @@
 import { Prisma } from '@prisma/client';
-import type { Category, MediaType, Status } from '@prisma/client';
+import type { Category, Status } from '@prisma/client';
 
 import { prisma } from '../lib/prisma.js';
 
 export interface CreateMediaItemData {
   content: string;
-  type: MediaType;
-  url: string | null;
-  title: string | null;
   status: Status;
+}
+
+export interface TriageMediaItemData {
+  category: Category;
+  title: string;
+  year: number | null | undefined;
+  creator: string | null | undefined;
+  description: string | null | undefined;
 }
 
 // The only place that touches `prisma.mediaItem` for the capture flow (DEC-004 / CONVENTIONS.md).
@@ -25,15 +30,33 @@ export class ItemsRepository {
     });
   }
 
-  // Triage: sets `category` and `status = ORGANIZED` atomically (docs/PROJECT.md). Returns
-  // `null` when `id` does not match any MediaItem (Prisma P2025) instead of throwing, so the
-  // service layer owns translating "not found" into a business exception.
-  async updateCategory(id: string, category: Category) {
+  async findById(id: string) {
+    return prisma.mediaItem.findUnique({ where: { id } });
+  }
+
+  // Triage: sets `category`, `title`, `year`, `creator`, `description` and
+  // `status = ORGANIZED` atomically (docs/PROJECT.md). Returns `null` when `id` does not match
+  // any MediaItem (Prisma P2025) instead of throwing, so the service layer owns translating
+  // "not found" into a business exception.
+  async updateTriage(id: string, data: TriageMediaItemData) {
     try {
       return await prisma.mediaItem.update({
         where: { id },
-        data: { category, status: 'ORGANIZED' },
+        data: { ...data, status: 'ORGANIZED' },
       });
+    } catch (error) {
+      if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2025') {
+        return null;
+      }
+      throw error;
+    }
+  }
+
+  // Delete is permanent and immediate (docs/PROJECT.md). Returns `null` when `id` does not
+  // match any MediaItem (Prisma P2025) instead of throwing, mirroring `updateTriage`.
+  async delete(id: string) {
+    try {
+      return await prisma.mediaItem.delete({ where: { id } });
     } catch (error) {
       if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2025') {
         return null;

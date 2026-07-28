@@ -10,10 +10,11 @@ const seedItems: MediaItem[] = [
   {
     id: '1',
     content: 'Remember to buy milk',
-    type: 'TEXT',
-    url: null,
     title: null,
     category: null,
+    year: null,
+    creator: null,
+    description: null,
     status: 'INBOX',
     createdAt: new Date('2026-01-02T10:00:00.000Z'),
   },
