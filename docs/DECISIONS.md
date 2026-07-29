@@ -150,8 +150,8 @@ agents don't reintroduce "Library" in new code.
 **Do not:** Leave mixed naming (e.g., a `LibraryView` importing from a `library/` folder) — this is
 a full rename, not an alias.
 
-## DEC-016 — Refine-Time Web Suggestions & Unified Capture Input (external provider TBD)
-**Status:** Proposed
+## DEC-016 — Refine-Time Web Suggestions & Unified Capture Input
+**Status:** Accepted (provider mapping finalized 2026-07-29)
 **Date:** 2026-07-28
 **Decision:** `MediaItem` has no `type`/`url` fields or `MediaType` enum — `content` is the only
 captured input (free text or URL, no upfront distinction), and `POST /items` is a pure
@@ -161,24 +161,43 @@ refine-metadata modal (`GET /items/{id}/suggestions`): if `content` parses as a 
 page and extract title/description; otherwise, call an external "determine media" lookup to
 suggest category/title/year/creator/description. Both branches are best-effort — any failure
 (timeout, malformed response, no match) returns an empty/partial suggestion and never blocks the
-modal or triage. Suggestion fields are plain text only (no images/posters/thumbnails). Which
-external API(s) power the media-lookup branch — one general-purpose provider vs.
-category-specific providers (movies/books/games/articles) — is **not yet decided** and must be
-resolved before implementation. The Inbox card UI is a single `ItemCard` (no `TextCard`/
-`LinkCard` split); it may still cosmetically auto-linkify URL-shaped `content` client-side, but
-this is presentational only.
+modal or triage. Suggestion fields are plain text only (no images/posters/thumbnails). The
+Inbox card UI is a single `ItemCard` (no `TextCard`/`LinkCard` split); it may still cosmetically
+auto-linkify URL-shaped `content` client-side, but this is presentational only.
+
+**Media-lookup provider mapping (resolved 2026-07-29):** the non-URL branch uses **Gemini**
+(`@google/genai`, the current official SDK — `@google/generative-ai` is deprecated) strictly as
+a **classifier**: given raw `content`, it returns `{ category, searchQuery }` only — it never
+invents title/year/creator/description itself, so a hallucinated Gemini guess can never leak into
+a MOVIE/BOOK/GAME item's metadata. The classified category then routes to exactly one
+category-specific provider via a small registry:
+- `MOVIE` → **TMDB**
+- `BOOK` → **Open Library**
+- `GAME` → **IGDB** (Twitch OAuth client-credentials token, cached/refreshed — not a plain API key)
+- `ARTICLE` → **no provider** — Gemini's own guess (`searchQuery`) is used as-is for `title`,
+  other fields stay `null`
+
+Every external call (classifier + each provider) shares one timeout + best-effort wrapper: on
+timeout/error/no-match it degrades to a partial/empty suggestion, never an exception. `@google/genai`
+is the only new npm dependency — TMDB/Open Library/IGDB have no official Node SDKs and are called
+via plain `fetch`.
 **Why:** The product needs richer per-item metadata (year/creator/description) and computed
 "suggestions from the web" to reduce manual triage entry, without treating text vs. link as a
 first-class capture-time concept — URL-shape only matters when choosing a suggestion source.
 This simplifies the schema (drops `type`/`url`/`MediaType`), consolidates the former
 capture-time link-title-extraction logic into one refine-time service, and removes a
 card-rendering branch. It also introduces a new external dependency, which per `AI-RULES.md`
-requires an explicit decision rather than silent addition.
+requires an explicit decision rather than silent addition. Splitting "classify + build a query"
+(Gemini) from "fetch the authoritative facts" (category-specific provider) keeps each system
+doing only what it's good at, and a category-specific provider registry is simpler to read/test
+than branching logic while staying proportionate to the closed 4-value `Category` enum.
 **Do not:** Reintroduce `type`/`url` as stored fields or branch on them at capture time. Do not
 run any network fetch during `POST /items`. Do not keep `TextCard`/`LinkCard` as separate
-components. Do not pick/wire up a specific external API without recording the choice here
-first. Do not let a failed/slow suggestion lookup block capture or triage. Do not fetch or store
-images/thumbnails as part of this feature — remains out of scope per DEC-013.
+components. Do not let Gemini return or be trusted for title/year/creator/description outside
+the `ARTICLE` no-provider case. Do not let a failed/slow suggestion lookup block capture or
+triage. Do not fetch or store images/thumbnails as part of this feature — remains out of scope
+per DEC-013. Do not add `@google/generative-ai` (deprecated) or unofficial TMDB/IGDB/Open
+Library SDK wrappers.
 
 ---
 
