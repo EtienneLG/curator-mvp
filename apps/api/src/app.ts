@@ -23,7 +23,7 @@ export async function buildApp(env: Env) {
   await app.register(corsPlugin(env));
   await app.register(swaggerPlugin);
   await app.register(healthRoute);
-  await app.register(itemsRoute);
+  await app.register(itemsRoute(env));
 
   return app;
 }

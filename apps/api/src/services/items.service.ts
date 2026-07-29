@@ -1,9 +1,13 @@
 import { NotFoundError } from '../lib/errors.js';
 import type { CaptureItemInput, ListItemsQuery, TriageItemInput } from '../schemas/item.schema.js';
 import type { ItemsRepository } from '../repositories/items.repository.js';
+import type { SuggestionsService } from './suggestions.service.js';
 
 export class ItemsService {
-  constructor(private readonly itemsRepository: ItemsRepository) {}
+  constructor(
+    private readonly itemsRepository: ItemsRepository,
+    private readonly suggestionsService: SuggestionsService,
+  ) {}
 
   // Capture just persists raw content with status = INBOX; no link detection or metadata lookup.
   async capture(input: CaptureItemInput) {
@@ -30,6 +34,16 @@ export class ItemsService {
       throw new NotFoundError(`MediaItem not found: ${id}`);
     }
     return item;
+  }
+
+  // Throws NotFoundError when `id` doesn't match any MediaItem; the suggestion lookup itself
+  // never throws (see SuggestionsService).
+  async getSuggestions(id: string) {
+    const item = await this.itemsRepository.findById(id);
+    if (!item) {
+      throw new NotFoundError(`MediaItem not found: ${id}`);
+    }
+    return this.suggestionsService.suggest(item.content);
   }
 
   // Throws NotFoundError when `id` doesn't match any MediaItem.

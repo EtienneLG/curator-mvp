@@ -1,3 +1,4 @@
 .drafts
 node_modules
 *.env
+.vscode

@@ -27,11 +27,8 @@ export const EMPTY_SUGGESTION: Suggestion = {
 };
 
 /**
- * Gemini classifier output. Gemini returns a committed `category` plus a `searchQuery` for the
- * matching provider — it never supplies title/year/creator/description itself (the `ARTICLE`
- * category is the exception, handled downstream in `suggestions.service` by reusing
- * `searchQuery` as the title guess). Malformed/missing output is a classification failure and
- * must fall back to `EMPTY_SUGGESTION`, never throw.
+ * Gemini's classification output: a category plus a search query for the matching provider.
+ * Never includes title/year/creator/description itself.
  */
 export const GeminiClassificationSchema = z.object({
   category: CategorySchema,
@@ -86,7 +83,7 @@ export const OpenLibrarySearchResponseSchema = z.object({
 export type OpenLibrarySearchResponse = z.infer<typeof OpenLibrarySearchResponseSchema>;
 
 /**
- * Raw IGDB `/games` response — only the fields consumed by `igdb.provider.ts` are modeled.
+ * Raw IGDB `/games` response — only fields consumed by `igdb.provider.ts` are modeled.
  * IGDB dates are unix seconds; `involved_companies` carries the developer/publisher name.
  */
 export const IgdbSearchResponseSchema = z.array(

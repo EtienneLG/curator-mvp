@@ -3,9 +3,7 @@ import type { FastifyReply, FastifyRequest } from 'fastify';
 import type { CaptureItemInput, ItemParams, ListItemsQuery, TriageItemInput } from '../schemas/item.schema.js';
 import type { ItemsService } from '../services/items.service.js';
 
-// Thin: validate → delegate → respond. Validation happens at the Fastify layer (route
-// `schema`, see routes/items.route.ts) via fastify-type-provider-zod; invalid requests never
-// reach these handlers.
+// Thin: validate (at the route schema layer) → delegate → respond.
 export function createPostItem(itemsService: ItemsService) {
   return async function postItem(
     request: FastifyRequest<{ Body: CaptureItemInput }>,
@@ -23,6 +21,16 @@ export function createGetItems(itemsService: ItemsService) {
   ) {
     const items = await itemsService.list(request.query);
     reply.status(200).send(items);
+  };
+}
+
+export function createGetItemSuggestions(itemsService: ItemsService) {
+  return async function getItemSuggestions(
+    request: FastifyRequest<{ Params: ItemParams }>,
+    reply: FastifyReply,
+  ) {
+    const suggestion = await itemsService.getSuggestions(request.params.id);
+    reply.status(200).send(suggestion);
   };
 }
 
