@@ -120,4 +120,30 @@ export const handlers: HttpHandler[] = [
     // Mirror the real backend's 204 No Content (see `apiFetch`'s no-body handling).
     return new HttpResponse(null, { status: 204 });
   }),
+
+  http.post('*/items', async ({ request }) => {
+    const body = (await request.json()) as { content: string };
+
+    if (!body.content || body.content.trim().length === 0) {
+      return HttpResponse.json(
+        { error: { code: 'BAD_REQUEST', message: 'content is required' } },
+        { status: 400 },
+      );
+    }
+
+    const created: MediaItem = {
+      id: `captured-${itemsDb.length + 1}`,
+      content: body.content,
+      title: null,
+      category: null,
+      year: null,
+      creator: null,
+      description: null,
+      status: 'INBOX',
+      createdAt: new Date(),
+    };
+    itemsDb = [created, ...itemsDb];
+
+    return HttpResponse.json(created, { status: 201 });
+  }),
 ];

@@ -1,6 +1,12 @@
 import { apiFetch } from './api-client';
 
-import { CategorySchema, MediaItemSchema, type Category, type MediaItem } from '../types/media-item.types';
+import {
+  CategorySchema,
+  MediaItemSchema,
+  type Category,
+  type CaptureInput,
+  type MediaItem,
+} from '../types/media-item.types';
 import { ItemListResponseSchema } from '../types/api.types';
 
 /**
@@ -42,4 +48,16 @@ export async function triageItem(id: string, input: TriageItemInput): Promise<Me
 
 export async function deleteItem(id: string): Promise<void> {
   await apiFetch<unknown>(`/items/${id}`, { method: 'DELETE' });
+}
+
+// Capture is a single, undifferentiated persist of raw `content` with
+// `status = INBOX` — no link detection or metadata resolution happens here
+// (docs/PROJECT.md → Business Rules).
+export async function captureItem(input: CaptureInput): Promise<MediaItem> {
+  const data = await apiFetch<unknown>('/items', {
+    method: 'POST',
+    body: JSON.stringify(input),
+  });
+
+  return MediaItemSchema.parse(data);
 }

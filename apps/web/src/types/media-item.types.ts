@@ -27,3 +27,14 @@ export const MediaItemSchema = z.object({
 });
 
 export type MediaItem = z.infer<typeof MediaItemSchema>;
+
+/**
+ * Capture payload — the All-Capture Bar accepts any free-form text or URL as
+ * a single undifferentiated string; no client/server type branching happens
+ * at capture time (docs/PROJECT.md → Business Rules).
+ */
+export const CaptureInputSchema = z.object({
+  content: z.string().trim().min(1, 'Enter something to capture'),
+});
+
+export type CaptureInput = z.infer<typeof CaptureInputSchema>;
