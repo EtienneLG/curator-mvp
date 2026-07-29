@@ -25,7 +25,7 @@ export function ItemCard({ item, children, onClick }: ItemCardProps) {
   return (
     <article
       onClick={onClick}
-      className="flex flex-col gap-3 rounded-lg border border-gray-200 bg-white p-4 shadow-sm"
+      className="flex justify-between items-center rounded-lg border border-gray-200 bg-white p-4 shadow-sm"
     >
       {isUrlLike(item.content) ? (
         <a
