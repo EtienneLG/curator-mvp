@@ -1,9 +1,3 @@
-/**
- * Centralized fetch client for `apps/api`. All service functions in this
- * folder should route their HTTP calls through this helper — never call
- * `fetch` directly from components or hooks (see AGENTS.md → API Integration).
- */
-
 const API_BASE_URL = import.meta.env.VITE_API_URL ?? '';
 
 export class ApiError extends Error {

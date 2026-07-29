@@ -11,11 +11,7 @@ interface UseDeleteItemResult {
   error: Error | null;
 }
 
-/**
- * Delete is permanent and immediate — no soft-delete, no trash bin
- * (docs/PROJECT.md → Business Rules). Optimistically drops the card from the
- * `['items', 'inbox']` cache for instant UX, rolling back on failure.
- */
+// Delete is permanent — no soft-delete or trash bin.
 export function useDeleteItem(): UseDeleteItemResult {
   const queryClient = useQueryClient();
 

@@ -17,7 +17,6 @@ describe('LibraryView', () => {
     expect(screen.getByText('Dune')).toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'Example Movie' })).toBeInTheDocument();
 
-    // Read-only: no delete control should be present.
     expect(screen.queryByRole('button', { name: /delete item/i })).not.toBeInTheDocument();
   });
 

@@ -8,14 +8,7 @@ import { DeleteButton } from './DeleteButton';
 import { ItemCard } from './ItemCard';
 import { RefineMetadataModal } from './RefineMetadataModal';
 
-/**
- * Inbox screen: lists unorganized items newest-first. Tapping a card opens
- * the Refine & Triage Modal (docs/PROJECT.md → Core Features); Delete stays
- * a separate, inline card action, independent of the modal (docs/PROJECT.md
- * → Business Rules). All data fetching/mutation logic lives in the
- * `useInboxItems`/`useTriageItem`/`useDeleteItem` hooks — this component only
- * renders + local UI state (which card's modal is open) (see AGENTS.md → #1 Rule).
- */
+/** Delete stays a separate, inline card action, independent of the refine modal. */
 export function InboxView() {
   const { data: items, isLoading, error } = useInboxItems();
   const { triage } = useTriageItem();

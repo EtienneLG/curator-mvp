@@ -2,12 +2,7 @@ import { z } from 'zod';
 
 import { CategorySchema } from './item.schema.js';
 
-// Naming/structure mirrors item.schema.ts — Zod is the source of truth for every shape
-// crossing a boundary in the suggestion pipeline (DEC-016), whether that boundary is the API
-// response or an untrusted external API response (Gemini, TMDB, Open Library, IGDB).
-
 /**
- * Response DTO for `GET /items/{id}/suggestions` (docs/ARCHITECTURE.md, DEC-016).
  * Every field is best-effort and nullable — a failed/partial lookup returns nulls rather than
  * an error, and must never block the refine-metadata modal from opening.
  */
@@ -21,9 +16,8 @@ export const SuggestionSchema = z.object({
 
 export type Suggestion = z.infer<typeof SuggestionSchema>;
 
-// Shared fallback returned whenever a step of the pipeline fails/times out/finds no match
-// (DEC-016 best-effort guarantee) — a single constant so every failure path returns the exact
-// same shape.
+// Shared fallback returned whenever a step of the pipeline fails/times out/finds no match, so
+// every failure path returns the exact same shape.
 export const EMPTY_SUGGESTION: Suggestion = {
   category: null,
   title: null,
@@ -33,13 +27,11 @@ export const EMPTY_SUGGESTION: Suggestion = {
 };
 
 /**
- * Gemini classifier output (DEC-016). Gemini is used strictly as a classifier: given raw
- * `content`, it must return a committed `category` plus a `searchQuery` for the matching
- * provider — it never supplies title/year/creator/description itself (the `ARTICLE` category is
- * the one exception, handled downstream in `suggestions.service` by reusing `searchQuery` as the
- * title guess, since no provider is registered for it). The raw model response is untrusted
- * external input and must be parsed with this schema before use; malformed/missing output is a
- * classification failure and must fall back to `EMPTY_SUGGESTION`, never throw.
+ * Gemini classifier output. Gemini returns a committed `category` plus a `searchQuery` for the
+ * matching provider — it never supplies title/year/creator/description itself (the `ARTICLE`
+ * category is the exception, handled downstream in `suggestions.service` by reusing
+ * `searchQuery` as the title guess). Malformed/missing output is a classification failure and
+ * must fall back to `EMPTY_SUGGESTION`, never throw.
  */
 export const GeminiClassificationSchema = z.object({
   category: CategorySchema,
@@ -50,10 +42,7 @@ export type GeminiClassification = z.infer<typeof GeminiClassificationSchema>;
 
 /**
  * Normalized metadata a category-specific provider (TMDB/Open Library/IGDB) returns after
- * mapping its own raw API response into this common shape. Providers validate their own raw
- * external response first (see each `*.provider.ts`) — this is the shared *output* contract
- * every provider adapts into, so `suggestions.service` and the provider registry stay
- * provider-agnostic (`services/suggestion-providers/types.ts`).
+ * mapping its own raw API response into this common shape (`services/suggestion-providers/types.ts`).
  */
 export const ProviderMetadataSchema = z.object({
   title: z.string().nullable(),
@@ -66,7 +55,7 @@ export type ProviderMetadata = z.infer<typeof ProviderMetadataSchema>;
 
 /**
  * Raw TMDB `/search/movie` response — only the fields consumed by `tmdb.provider.ts` are
- * modeled. External data is untrusted (docs/CONVENTIONS.md) — validate before reading.
+ * modeled.
  */
 export const TmdbSearchResponseSchema = z.object({
   results: z.array(
@@ -113,8 +102,7 @@ export type IgdbSearchResponse = z.infer<typeof IgdbSearchResponseSchema>;
 
 /**
  * Raw Twitch OAuth client-credentials token response, consumed by `igdb.provider.ts` to
- * authenticate against the IGDB API (DEC-016 — IGDB reuses Twitch's identity platform, so this
- * is exchanged for a short-lived bearer token rather than a plain API key).
+ * authenticate against the IGDB API (IGDB reuses Twitch's identity platform).
  */
 export const TwitchTokenResponseSchema = z.object({
   access_token: z.string().min(1),

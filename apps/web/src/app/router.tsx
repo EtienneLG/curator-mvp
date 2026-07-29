@@ -1,10 +1,6 @@
 import { createBrowserRouter, RouterProvider, useRouteError } from 'react-router-dom';
 
-/**
- * Route-level error boundary (see AGENTS.md → Error Handling: "Error
- * Boundaries at route and feature level"). Shown when a route's loader,
- * action, or render throws.
- */
+/** Shown when a route's loader, action, or render throws. */
 function RouteErrorBoundary() {
   useRouteError();
 
@@ -43,10 +39,6 @@ const router = createBrowserRouter([
   },
 ]);
 
-/**
- * Root router. Add feature routes here (lazily loaded) as pages are built —
- * see AGENTS.md → Routing Strategy.
- */
 export function AppRouter() {
   return <RouterProvider router={router} />;
 }

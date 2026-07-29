@@ -15,12 +15,6 @@ interface UseCaptureItemResult {
   error: Error | null;
 }
 
-/**
- * Captures a new raw item via the All-Capture Bar (docs/PROJECT.md → Core
- * Features). On success, invalidates the `['items', 'inbox']` cache so the
- * new item appears newest-first; on failure, surfaces a toast (see
- * AGENTS.md → Error Handling — never swallow errors silently).
- */
 export function useCaptureItem(): UseCaptureItemResult {
   const queryClient = useQueryClient();
 

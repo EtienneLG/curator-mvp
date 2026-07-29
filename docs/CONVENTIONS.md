@@ -19,6 +19,18 @@ source of truth for formatting.
   Do not hand-write duplicate DTO/interface types when inference suffices.
 - ES Modules (`import`/`export`).
 
+### Comments
+- Comments explain **non-obvious "why"** (edge cases, external API quirks, unit conventions),
+  never "what" — code should read clearly enough not to need a play-by-play.
+- Do not cite `DEC-xxx` codes or link to `docs/DECISIONS.md`/`docs/ARCHITECTURE.md` in inline
+  comments — that context lives in the docs, not duplicated in code.
+- Max 1–2 lines per comment. No paragraph-style or multi-sentence comments.
+- Don't repeat the same comment across sibling functions/files — explain a shared pattern once,
+  where it's defined.
+- JSDoc only for exported APIs whose behavior isn't obvious from the signature; skip it for
+  simple pass-through types/schemas.
+- `// @ts-ignore` and `eslint-disable` still require a short (one-line) justification.
+
 ### Naming
 - **Files**: kebab-case for utilities/modules (`suggestions.service.ts`, `format-date.ts`);
   PascalCase for React components (`InboxView.tsx`).
@@ -38,7 +50,6 @@ source of truth for formatting.
 ### Git & Review
 - Conventional commits: `type(scope): description` (e.g., `feat(inbox): add link card`).
 - PRs < 400 lines of production code; every behavior change adds/updates tests.
-- `// @ts-ignore` and `eslint-disable` require a short justification comment.
 
 ### Security
 - Never hardcode secrets; keep `.env*` out of version control.

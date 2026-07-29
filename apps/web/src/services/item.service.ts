@@ -9,14 +9,7 @@ import {
 } from '../types/media-item.types';
 import { ItemListResponseSchema } from '../types/api.types';
 
-/**
- * Typed API calls for the `MediaItem` resource (docs/ARCHITECTURE.md → API
- * Surface). Every response is validated with the corresponding Zod schema
- * before it reaches hooks/components — never trust the raw JSON shape.
- */
-
-// Triage/refine payload: sets all refined metadata + moves the item to the
-// Library in one atomic action (docs/PROJECT.md → Business Rules).
+// Triage/refine: sets all refined metadata and moves the item to the Library in one atomic action.
 export interface TriageItemInput {
   category: Category;
   title: string;
@@ -50,9 +43,7 @@ export async function deleteItem(id: string): Promise<void> {
   await apiFetch<unknown>(`/items/${id}`, { method: 'DELETE' });
 }
 
-// Capture is a single, undifferentiated persist of raw `content` with
-// `status = INBOX` — no link detection or metadata resolution happens here
-// (docs/PROJECT.md → Business Rules).
+// Capture is a single, undifferentiated persist of raw `content` with `status = INBOX`.
 export async function captureItem(input: CaptureInput): Promise<MediaItem> {
   const data = await apiFetch<unknown>('/items', {
     method: 'POST',

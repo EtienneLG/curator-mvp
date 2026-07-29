@@ -3,13 +3,7 @@ import { useState, type FormEvent } from 'react';
 import { useCaptureItem } from '../../../hooks/useCaptureItem';
 import { CaptureInputSchema } from '../../../types/media-item.types';
 
-/**
- * All-Capture Bar (docs/PROJECT.md → Core Features): a single free-form
- * input for any text or URL — no client/server type branching at capture
- * time. Deliberately a simple controlled field, not React Hook Form (see
- * docs/CONVENTIONS.md → "do not over-engineer it"). All mutation logic
- * lives in `useCaptureItem` (see AGENTS.md → #1 Rule).
- */
+/** Deliberately a simple controlled input, not React Hook Form — capture is a single free-form field. */
 export function CaptureBar() {
   const [content, setContent] = useState('');
   const [validationError, setValidationError] = useState<string | null>(null);

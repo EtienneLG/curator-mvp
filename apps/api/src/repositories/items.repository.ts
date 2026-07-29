@@ -16,13 +16,12 @@ export interface TriageMediaItemData {
   description: string | null | undefined;
 }
 
-// The only place that touches `prisma.mediaItem` for the capture flow (DEC-004 / CONVENTIONS.md).
 export class ItemsRepository {
   async create(data: CreateMediaItemData) {
     return prisma.mediaItem.create({ data });
   }
 
-  // Inbox/Library are ordered newest-first (createdAt DESC per PROJECT.md).
+  // Newest-first (createdAt DESC).
   async findByStatus(status: Status) {
     return prisma.mediaItem.findMany({
       where: { status },
@@ -34,10 +33,8 @@ export class ItemsRepository {
     return prisma.mediaItem.findUnique({ where: { id } });
   }
 
-  // Triage: sets `category`, `title`, `year`, `creator`, `description` and
-  // `status = ORGANIZED` atomically (docs/PROJECT.md). Returns `null` when `id` does not match
-  // any MediaItem (Prisma P2025) instead of throwing, so the service layer owns translating
-  // "not found" into a business exception.
+  // Returns `null` when `id` does not match any MediaItem (Prisma P2025) instead of throwing,
+  // so the service layer owns translating "not found" into a business exception.
   async updateTriage(id: string, data: TriageMediaItemData) {
     try {
       return await prisma.mediaItem.update({
@@ -52,8 +49,7 @@ export class ItemsRepository {
     }
   }
 
-  // Delete is permanent and immediate (docs/PROJECT.md). Returns `null` when `id` does not
-  // match any MediaItem (Prisma P2025) instead of throwing, mirroring `updateTriage`.
+  // Returns `null` when `id` does not match any MediaItem, mirroring `updateTriage`.
   async delete(id: string) {
     try {
       return await prisma.mediaItem.delete({ where: { id } });

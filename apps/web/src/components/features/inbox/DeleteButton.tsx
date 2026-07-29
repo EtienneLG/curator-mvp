@@ -2,11 +2,7 @@ interface DeleteButtonProps {
   onDelete: () => void;
 }
 
-/**
- * Permanently deletes the item — single action, no confirm modal, no
- * soft-delete (docs/PROJECT.md -> Business Rules). Icon-only, so it must
- * carry an aria-label (see AGENTS.md -> Error Handling & Accessibility).
- */
+/** No confirm modal or soft-delete; icon-only button, so it needs an aria-label. */
 export function DeleteButton({ onDelete }: DeleteButtonProps) {
   return (
     <button

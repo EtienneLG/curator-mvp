@@ -10,12 +10,6 @@ const NAV_ITEMS: NavItem[] = [
   { to: '/library', label: 'Library' },
 ];
 
-/**
- * Horizontal navbar fixed to the bottom of the screen for switching between
- * the Inbox and Library pages (mobile-first — see docs/PROJECT.md → Primary
- * surface). Rendered once by `AppLayout` so it persists across route
- * navigation.
- */
 export function BottomNav() {
   return (
     <nav

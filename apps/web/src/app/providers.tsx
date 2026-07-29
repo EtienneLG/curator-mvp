@@ -8,12 +8,7 @@ interface AppProvidersProps {
   children: ReactNode;
 }
 
-/**
- * App-wide providers (TanStack Query, toast notifications, etc.). Keep this
- * the single place providers are composed — do not scatter provider
- * wrapping across pages. `<Toaster />` is mounted once here so any hook can
- * call `toast.error(...)` on action failure (see AGENTS.md → Error Handling).
- */
+/** `<Toaster />` is mounted once here so any hook can call `toast.error(...)` on failure. */
 export function AppProviders({ children }: AppProvidersProps) {
   return (
     <QueryClientProvider client={queryClient}>

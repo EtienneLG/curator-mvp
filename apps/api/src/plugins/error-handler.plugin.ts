@@ -4,16 +4,8 @@ import { ZodError } from 'zod';
 
 import { AppError } from '../lib/errors.js';
 
-// Centralized error mapping: services throw typed AppError subclasses; request validation
-// errors come from Fastify's Zod-backed validator compiler (route `schema.body`, see
-// fastify-type-provider-zod) or, in code paths that still call `.parse()` directly, a raw
-// `ZodError`. Everything else is an unexpected 500. Response shape is always
-// `{ error: { code, message, details } }` — stack traces never leak.
-//
-// `setErrorHandler` only applies to the encapsulation context it's registered in (and its
-// children) by default. Setting the `skip-override` symbol (the same mechanism the
-// `fastify-plugin` package uses internally) hoists this plugin to the root context so it
-// applies to every route, without adding a new dependency.
+// Maps AppError subclasses, Fastify/Zod validation errors, and unexpected errors to a
+// consistent `{ error: { code, message, details } }` shape; stack traces never leak.
 export const errorHandlerPlugin: FastifyPluginAsync = async (app) => {
   app.setErrorHandler((error, request, reply) => {
     if (error instanceof AppError) {
@@ -47,4 +39,6 @@ export const errorHandlerPlugin: FastifyPluginAsync = async (app) => {
   });
 };
 
+// Hoists this plugin to the root encapsulation context so it applies to every route,
+// not just the context it's registered in.
 (errorHandlerPlugin as unknown as Record<symbol, boolean>)[Symbol.for('skip-override')] = true;

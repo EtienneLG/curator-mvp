@@ -10,14 +10,8 @@ interface ItemCardProps {
 }
 
 /**
- * Single uniform card for a `MediaItem` — there is no `TextCard`/`LinkCard`
- * split (docs/PROJECT.md, DEC-016). URL-shaped `content` is cosmetically
- * auto-linkified for display only; this is presentational, has no stored
- * field, and carries no business meaning. Refined `title` (once triaged)
- * takes display precedence over the raw `content`. Triage/delete controls
- * are composed in via `children` (see AGENTS.md → Component Rules:
- * composition over inheritance) so this component stays decoupled from
- * `DeleteButton`/`RefineMetadataModal`.
+ * URL-shaped `content` is auto-linkified for display only — cosmetic, no stored field.
+ * Refined `title` (once triaged) takes display precedence over the raw `content`.
  */
 export function ItemCard({ item, children, onClick }: ItemCardProps) {
   const displayText = item.title ?? item.content;

@@ -11,13 +11,7 @@ interface UseTriageItemResult {
   error: Error | null;
 }
 
-/**
- * Triage sets `category`, `title`, `year`, `creator`, `description` and
- * `status = ORGANIZED` in one atomic action, which removes the item from
- * the Inbox result set (docs/PROJECT.md → Business Rules). Optimistically
- * drops the card from the `['items', 'inbox']` cache for instant UX, rolling
- * back on failure (see AGENTS.md → Hooks Rules).
- */
+// Triage moves the item to ORGANIZED, which removes it from the Inbox result set.
 export function useTriageItem(): UseTriageItemResult {
   const queryClient = useQueryClient();
 

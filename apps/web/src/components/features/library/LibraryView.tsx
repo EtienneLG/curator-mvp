@@ -1,13 +1,7 @@
 import { useLibraryItems } from '../../../hooks/useLibraryItems';
 import { ItemCard } from '../inbox/ItemCard';
 
-/**
- * Library screen: lists organized items newest-first, read-only. Category
- * filtering is explicitly deferred (docs/PROJECT.md → Sorted Library) — no
- * triage/delete controls here, unlike `InboxView`. All data fetching lives
- * in the `useLibraryItems` hook — this component only renders (see AGENTS.md
- * → #1 Rule).
- */
+/** Read-only: no triage/delete controls here, unlike `InboxView`. */
 export function LibraryView() {
   const { data: items, isLoading, error } = useLibraryItems();
 

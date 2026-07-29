@@ -3,10 +3,9 @@ import type { FastifyReply, FastifyRequest } from 'fastify';
 import type { CaptureItemInput, ItemParams, ListItemsQuery, TriageItemInput } from '../schemas/item.schema.js';
 import type { ItemsService } from '../services/items.service.js';
 
-// Thin: validate → delegate → respond. Body validation now happens at the Fastify layer
-// (route `schema.body`, see routes/items.route.ts) via fastify-type-provider-zod; invalid
-// requests never reach this handler and are mapped to `{ error: { code: 'VALIDATION_ERROR',
-// ... } }` by the centralized error handler.
+// Thin: validate → delegate → respond. Validation happens at the Fastify layer (route
+// `schema`, see routes/items.route.ts) via fastify-type-provider-zod; invalid requests never
+// reach these handlers.
 export function createPostItem(itemsService: ItemsService) {
   return async function postItem(
     request: FastifyRequest<{ Body: CaptureItemInput }>,
@@ -17,8 +16,6 @@ export function createPostItem(itemsService: ItemsService) {
   };
 }
 
-// Thin: validate → delegate → respond. Query validation happens at the Fastify layer
-// (route `schema.querystring`, see routes/items.route.ts) via fastify-type-provider-zod.
 export function createGetItems(itemsService: ItemsService) {
   return async function getItems(
     request: FastifyRequest<{ Querystring: ListItemsQuery }>,
@@ -29,8 +26,6 @@ export function createGetItems(itemsService: ItemsService) {
   };
 }
 
-// Thin: validate → delegate → respond. Params/body validation happens at the Fastify layer
-// (route `schema.params`/`schema.body`, see routes/items.route.ts) via fastify-type-provider-zod.
 export function createPatchItem(itemsService: ItemsService) {
   return async function patchItem(
     request: FastifyRequest<{ Params: ItemParams; Body: TriageItemInput }>,
@@ -41,8 +36,6 @@ export function createPatchItem(itemsService: ItemsService) {
   };
 }
 
-// Thin: validate → delegate → respond. Params validation happens at the Fastify layer
-// (route `schema.params`, see routes/items.route.ts) via fastify-type-provider-zod.
 export function createDeleteItem(itemsService: ItemsService) {
   return async function deleteItem(
     request: FastifyRequest<{ Params: ItemParams }>,

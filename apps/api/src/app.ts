@@ -10,13 +10,11 @@ import { swaggerPlugin } from './plugins/swagger.plugin.js';
 import { healthRoute } from './routes/health.route.js';
 import { itemsRoute } from './routes/items.route.js';
 
-// Builds (but does not start) the Fastify app: registers plugins and routes only.
-// Kept separate from server.ts so tests can `app.inject()` without binding a port.
+// Builds (but does not start) the Fastify app. Kept separate from server.ts so tests can
+// `app.inject()` without binding a port.
 export async function buildApp(env: Env) {
   const app = fastify({ loggerInstance: createLogger(env) });
 
-  // Lets route `schema` options accept Zod schemas directly (body/response/params/query),
-  // with validation, serialization and static type inference handled by the type provider.
   app.setValidatorCompiler(validatorCompiler);
   app.setSerializerCompiler(serializerCompiler);
 

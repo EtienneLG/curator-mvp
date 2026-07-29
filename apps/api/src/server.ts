@@ -20,8 +20,7 @@ async function main() {
 }
 
 main().catch((error: unknown) => {
-  // No logger instance exists yet if startup fails this early (e.g. invalid env) —
-  // write directly to stderr instead of using console (banned per docs/CONVENTIONS.md).
+  // No logger instance exists yet if startup fails this early; write directly to stderr.
   process.stderr.write(`${error instanceof Error ? error.stack : String(error)}\n`);
   process.exit(1);
 });

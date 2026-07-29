@@ -12,10 +12,7 @@ interface RefineMetadataModalProps {
   onClose: () => void;
 }
 
-// Manual-entry refine form: category, title, year, creator, description — no
-// web-suggestion prefill (out of scope for this change). Validating commits
-// all fields + `status = ORGANIZED` in one atomic triage action
-// (docs/PROJECT.md → Business Rules).
+// Validating commits all fields + `status = ORGANIZED` in one atomic triage action.
 const RefineFormSchema = z.object({
   category: CategorySchema,
   title: z.string().trim().min(1, 'Title is required'),
@@ -26,13 +23,6 @@ const RefineFormSchema = z.object({
 
 type RefineFormValues = z.infer<typeof RefineFormSchema>;
 
-/**
- * Refine & Triage Modal (docs/PROJECT.md → Core Features): shows the raw
- * capture and a manual-entry form for the refined metadata. Delete is a
- * separate, inline Inbox card action and is not available here (docs/PROJECT.md
- * → Business Rules). Pure UI + local form state — the actual triage mutation
- * is owned by the caller and invoked via `onValidate` (see AGENTS.md → #1 Rule).
- */
 export function RefineMetadataModal({ item, onValidate, onClose }: RefineMetadataModalProps) {
   const {
     register,

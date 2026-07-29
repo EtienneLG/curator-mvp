@@ -1,5 +1,4 @@
-// Base typed business exception. Services throw subclasses of this; the centralized
-// Fastify error handler maps them to `{ error: { code, message, details } }`.
+// Base typed business exception; the centralized Fastify error handler maps subclasses to `{ error: { code, message, details } }`.
 export class AppError extends Error {
   readonly code: string;
   readonly statusCode: number;

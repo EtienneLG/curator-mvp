@@ -2,7 +2,6 @@ import pino from 'pino';
 
 import type { Env } from '../config/env.js';
 
-// Pino only — never console.log. Pretty-printed in development for readability.
 export function createLogger(env: Pick<Env, 'NODE_ENV'>) {
   return pino({
     level: env.NODE_ENV === 'test' ? 'silent' : 'info',
