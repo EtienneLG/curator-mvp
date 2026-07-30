@@ -55,4 +55,14 @@ describe('ItemCard', () => {
 
     expect(onClick).toHaveBeenCalledTimes(1);
   });
+
+  it('shows a category badge once the item has been categorized', () => {
+    render(<ItemCard item={{ ...textItem, category: 'BOOK' }} />);
+    expect(screen.getByText('Book')).toBeInTheDocument();
+  });
+
+  it('renders no category badge when the item is uncategorized', () => {
+    render(<ItemCard item={textItem} />);
+    expect(screen.queryByText('Book')).not.toBeInTheDocument();
+  });
 });

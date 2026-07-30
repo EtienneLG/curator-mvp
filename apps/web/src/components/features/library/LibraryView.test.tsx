@@ -1,4 +1,5 @@
 import { render, screen, waitFor } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { HttpResponse, http } from 'msw';
 import { describe, expect, it } from 'vitest';
 
@@ -37,4 +38,39 @@ describe('LibraryView', () => {
 
     await waitFor(() => expect(screen.getByRole('alert')).toBeInTheDocument());
   });
+
+  it('opens the item detail modal when a card is clicked', async () => {
+    const { Wrapper } = createQueryClientWrapper();
+    render(<LibraryView />, { wrapper: Wrapper });
+
+    await waitFor(() => expect(screen.getAllByRole('listitem')).toHaveLength(2));
+    await userEvent.click(screen.getByText('Dune'));
+
+    expect(screen.getByRole('dialog', { name: /item details/i })).toBeInTheDocument();
+    expect(screen.getByText('A science fiction novel.')).toBeInTheDocument();
+  });
+
+  it('closes the modal when the close button is clicked', async () => {
+    const { Wrapper } = createQueryClientWrapper();
+    render(<LibraryView />, { wrapper: Wrapper });
+
+    await waitFor(() => expect(screen.getAllByRole('listitem')).toHaveLength(2));
+    await userEvent.click(screen.getByText('Dune'));
+    await userEvent.click(screen.getByRole('button', { name: /close/i }));
+
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+  });
+
+  it('deletes the item and closes the modal when delete is clicked', async () => {
+    const { Wrapper } = createQueryClientWrapper();
+    render(<LibraryView />, { wrapper: Wrapper });
+
+    await waitFor(() => expect(screen.getAllByRole('listitem')).toHaveLength(2));
+    await userEvent.click(screen.getByText('Dune'));
+    await userEvent.click(screen.getByRole('button', { name: /delete item/i }));
+
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    await waitFor(() => expect(screen.queryByText('Dune')).not.toBeInTheDocument());
+  });
 });
+

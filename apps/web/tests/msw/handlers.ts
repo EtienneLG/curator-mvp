@@ -1,6 +1,7 @@
 import { http, HttpResponse, type HttpHandler } from 'msw';
 
 import type { MediaItem } from '../../src/types/media-item.types';
+import type { Suggestion } from '../../src/types/suggestion.types';
 
 /**
  * Shared MSW request handlers. Add per-feature handlers here (or compose
@@ -58,6 +59,44 @@ export const libraryItemsFixture: MediaItem[] = [
   },
 ];
 
+export const emptySuggestionFixture: Suggestion = {
+  category: null,
+  title: null,
+  year: null,
+  creator: null,
+  description: null,
+};
+
+export const movieSuggestionFixture: Suggestion = {
+  category: 'MOVIE',
+  title: 'Suggested Movie Title',
+  year: 1999,
+  creator: 'Suggested Director',
+  description: 'A suggested synopsis.',
+};
+
+export const partialSuggestionFixture: Suggestion = {
+  category: 'MOVIE',
+  title: 'Suggested Movie Title',
+  year: 1999,
+  creator: null,
+  description: 'A suggested synopsis.',
+};
+
+// Per-item override map so individual tests can control what `GET
+// /items/:id/suggestions` returns without touching the shared handler.
+let suggestionsById: Record<string, Suggestion> = {};
+
+/** Resets suggestion overrides to empty — call from `afterEach` alongside `resetInboxItemsDb`. */
+export function resetSuggestionsDb() {
+  suggestionsById = {};
+}
+
+/** Lets a test set the suggestion returned for a given item id. */
+export function setSuggestionForItem(id: string, suggestion: Suggestion) {
+  suggestionsById[id] = suggestion;
+}
+
 // In-memory fake "database", seeded from the fixtures above. Mutated by
 // PATCH/DELETE so that a subsequent GET reflects prior mutations, mirroring
 // real backend behavior for cache-invalidation-driven tests.
@@ -83,6 +122,11 @@ export const handlers: HttpHandler[] = [
     }
 
     return HttpResponse.json([]);
+  }),
+
+  http.get('*/items/:id/suggestions', ({ params }) => {
+    const suggestion = suggestionsById[params.id as string] ?? emptySuggestionFixture;
+    return HttpResponse.json(suggestion);
   }),
 
   http.patch('*/items/:id', async ({ params, request }) => {

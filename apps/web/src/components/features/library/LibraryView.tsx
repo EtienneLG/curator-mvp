@@ -1,9 +1,15 @@
+import { useState } from 'react';
+
+import { useDeleteItem } from '../../../hooks/useDeleteItem';
 import { useLibraryItems } from '../../../hooks/useLibraryItems';
 import { ItemCard } from '../inbox/ItemCard';
+import { ItemDetailModal } from './ItemDetailModal';
 
-/** Read-only: no triage/delete controls here, unlike `InboxView`. */
+/** No inline triage/delete controls on the card itself — those live in the detail modal. */
 export function LibraryView() {
   const { data: items, isLoading, error } = useLibraryItems();
+  const { deleteItem } = useDeleteItem();
+  const [selectedItemId, setSelectedItemId] = useState<string | null>(null);
 
   if (isLoading) {
     return (
@@ -29,13 +35,30 @@ export function LibraryView() {
     );
   }
 
+  const selectedItem = items.find((item) => item.id === selectedItemId) ?? null;
+
+  const handleDelete = (id: string) => {
+    deleteItem(id);
+    setSelectedItemId(null);
+  };
+
   return (
-    <ul className="flex flex-col gap-3 p-4">
-      {items.map((item) => (
-        <li key={item.id}>
-          <ItemCard item={item} />
-        </li>
-      ))}
-    </ul>
+    <>
+      <ul className="flex flex-col gap-3 p-4">
+        {items.map((item) => (
+          <li key={item.id}>
+            <ItemCard item={item} onClick={() => setSelectedItemId(item.id)} />
+          </li>
+        ))}
+      </ul>
+
+      {selectedItem && (
+        <ItemDetailModal
+          item={selectedItem}
+          onDelete={() => handleDelete(selectedItem.id)}
+          onClose={() => setSelectedItemId(null)}
+        />
+      )}
+    </>
   );
 }

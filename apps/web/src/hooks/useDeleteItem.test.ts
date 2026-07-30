@@ -36,4 +36,34 @@ describe('useDeleteItem', () => {
       expect(cached).toHaveLength(0);
     });
   });
+
+  it('optimistically removes the deleted item from the library cache', async () => {
+    const libraryItems: MediaItem[] = [
+      {
+        id: '2',
+        content: 'Dune',
+        title: 'Dune',
+        category: 'BOOK',
+        year: 1965,
+        creator: 'Frank Herbert',
+        description: 'A science fiction novel.',
+        status: 'ORGANIZED',
+        createdAt: new Date('2026-01-02T10:00:00.000Z'),
+      },
+    ];
+
+    const { Wrapper, queryClient } = createQueryClientWrapper();
+    queryClient.setQueryData(['items', 'library'], libraryItems);
+
+    const { result } = renderHook(() => useDeleteItem(), { wrapper: Wrapper });
+
+    act(() => {
+      result.current.deleteItem('2');
+    });
+
+    await waitFor(() => {
+      const cached = queryClient.getQueryData<MediaItem[]>(['items', 'library']);
+      expect(cached).toHaveLength(0);
+    });
+  });
 });

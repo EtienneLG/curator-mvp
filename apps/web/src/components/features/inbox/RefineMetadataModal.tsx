@@ -2,9 +2,12 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 
+import { useSuggestion } from '../../../hooks/useSuggestion';
 import { CATEGORIES, CATEGORY_LABELS } from '../../../lib/constants';
 import { CategorySchema, type MediaItem } from '../../../types/media-item.types';
+import { hasSuggestedData, type Suggestion } from '../../../types/suggestion.types';
 import type { TriageItemInput } from '../../../services/item.service';
+import { SuggestionPanel } from './SuggestionPanel';
 
 interface RefineMetadataModalProps {
   item: MediaItem;
@@ -27,6 +30,7 @@ export function RefineMetadataModal({ item, onValidate, onClose }: RefineMetadat
   const {
     register,
     handleSubmit,
+    setValue,
     formState: { errors },
   } = useForm<RefineFormValues>({
     resolver: zodResolver(RefineFormSchema),
@@ -39,6 +43,10 @@ export function RefineMetadataModal({ item, onValidate, onClose }: RefineMetadat
     },
   });
 
+  // Fetches automatically as soon as the modal mounts (DEC-016) — best-effort, never
+  // blocks the form: a loading/empty/failed suggestion just means no panel is shown.
+  const { data: suggestion, isLoading: isSuggestionLoading } = useSuggestion(item.id);
+
   const onSubmit = handleSubmit((values) => {
     const parsedYear = values.year === '' ? null : Number(values.year);
     onValidate({
@@ -49,6 +57,26 @@ export function RefineMetadataModal({ item, onValidate, onClose }: RefineMetadat
       description: values.description === '' ? null : values.description,
     });
   });
+
+  // Only fills fields the suggestion actually resolved — anything the user already typed
+  // (or a field the lookup couldn't determine) is left untouched.
+  const handleApplySuggestion = (applied: Suggestion) => {
+    if (applied.category != null) {
+      setValue('category', applied.category, { shouldValidate: true });
+    }
+    if (applied.title != null) {
+      setValue('title', applied.title, { shouldValidate: true });
+    }
+    if (applied.year != null) {
+      setValue('year', String(applied.year), { shouldValidate: true });
+    }
+    if (applied.creator != null) {
+      setValue('creator', applied.creator, { shouldValidate: true });
+    }
+    if (applied.description != null) {
+      setValue('description', applied.description, { shouldValidate: true });
+    }
+  };
 
   return (
     <div
@@ -61,6 +89,16 @@ export function RefineMetadataModal({ item, onValidate, onClose }: RefineMetadat
         <p className="mb-4 whitespace-pre-wrap break-words text-sm text-gray-500">
           {item.content}
         </p>
+
+        {isSuggestionLoading && (
+          <p role="status" className="mb-4 text-sm text-gray-500">
+            Looking for a suggestion…
+          </p>
+        )}
+
+        {suggestion && hasSuggestedData(suggestion) && (
+          <SuggestionPanel suggestion={suggestion} onApply={handleApplySuggestion} />
+        )}
 
         <form onSubmit={onSubmit} className="flex flex-col gap-4">
           <div className="flex flex-col gap-1">
