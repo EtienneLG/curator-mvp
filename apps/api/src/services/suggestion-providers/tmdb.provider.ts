@@ -1,10 +1,11 @@
 import type { Logger } from '../../lib/logger.js';
-import { TmdbSearchResponseSchema } from '../../schemas/suggestion.schema.js';
+import { TmdbCreditsResponseSchema, TmdbSearchResponseSchema } from '../../schemas/suggestion.schema.js';
 import type { ProviderMetadata } from '../../schemas/suggestion.schema.js';
 import type { SuggestionProvider } from './types.js';
 import { withTimeout } from './types.js';
 
 const SEARCH_URL = 'https://api.themoviedb.org/3/search/movie';
+const CREDITS_URL = 'https://api.themoviedb.org/3/movie';
 
 // TMDB's `release_date` is `YYYY-MM-DD` (or an empty string when unknown) — only the year is
 // surfaced in `ProviderMetadata`, matching the `MediaItem.year` field.
@@ -56,7 +57,7 @@ export class TmdbProvider implements SuggestionProvider {
         return {
           title: topResult.title,
           year: parseYear(topResult.release_date),
-          creator: null, // TMDB search results don't include director/cast — out of scope for a search hit.
+          creator: await this.fetchDirector(topResult.id, signal, logger),
           description: topResult.overview ?? null,
         };
       },
@@ -72,5 +73,38 @@ export class TmdbProvider implements SuggestionProvider {
     }
 
     return result;
+  }
+
+  // Second request against `/movie/{id}/credits` to find the director — TMDB's search results
+  // don't include crew. Any failure here degrades to `null` without failing the whole `search()`
+  // call, so a lost director never costs the caller the title/year/description already resolved.
+  private async fetchDirector(movieId: number, signal: AbortSignal, logger: Logger): Promise<string | null> {
+    try {
+      const response = await fetch(`${CREDITS_URL}/${movieId}/credits`, {
+        headers: { Authorization: `Bearer ${this.apiKey}`, Accept: 'application/json' },
+        signal,
+      });
+
+      if (!response.ok) {
+        logger.warn({ provider: 'tmdb', status: response.status }, 'TMDB credits API returned a non-OK response');
+        return null;
+      }
+
+      // TMDB's response is untrusted external input — validate before reading.
+      const raw: unknown = await response.json();
+      const parsed = TmdbCreditsResponseSchema.safeParse(raw);
+      if (!parsed.success) {
+        logger.warn({ provider: 'tmdb' }, 'TMDB credits API response failed schema validation');
+        return null;
+      }
+
+      return parsed.data.crew.find((member) => member.job === 'Director')?.name ?? null;
+    } catch (error) {
+      logger.warn(
+        { provider: 'tmdb', err: error instanceof Error ? error.message : 'unknown error' },
+        'TMDB credits API call aborted or threw',
+      );
+      return null;
+    }
   }
 }

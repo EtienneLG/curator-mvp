@@ -57,6 +57,7 @@ export type ProviderMetadata = z.infer<typeof ProviderMetadataSchema>;
 export const TmdbSearchResponseSchema = z.object({
   results: z.array(
     z.object({
+      id: z.number().int(),
       title: z.string(),
       release_date: z.string().optional(),
       overview: z.string().optional(),
@@ -67,12 +68,24 @@ export const TmdbSearchResponseSchema = z.object({
 export type TmdbSearchResponse = z.infer<typeof TmdbSearchResponseSchema>;
 
 /**
+ * Raw TMDB `/movie/{id}/credits` response — only `crew[].job`/`crew[].name` are consumed, to
+ * find the entry with `job === 'Director'`.
+ */
+export const TmdbCreditsResponseSchema = z.object({
+  crew: z.array(z.object({ job: z.string(), name: z.string() })),
+});
+
+export type TmdbCreditsResponse = z.infer<typeof TmdbCreditsResponseSchema>;
+
+/**
  * Raw Open Library `/search.json` response — only the fields consumed by
- * `open-library.provider.ts` are modeled.
+ * `open-library.provider.ts` are modeled. `key` (e.g. `/works/OL45804W`) is the work identifier
+ * used to fetch the full work record for its description.
  */
 export const OpenLibrarySearchResponseSchema = z.object({
   docs: z.array(
     z.object({
+      key: z.string().optional(),
       title: z.string(),
       first_publish_year: z.number().int().optional(),
       author_name: z.array(z.string()).optional(),
@@ -81,6 +94,16 @@ export const OpenLibrarySearchResponseSchema = z.object({
 });
 
 export type OpenLibrarySearchResponse = z.infer<typeof OpenLibrarySearchResponseSchema>;
+
+/**
+ * Raw Open Library `/works/{key}.json` response — only `description` is consumed. Open Library
+ * returns it as either a plain string or `{ type, value }`, depending on the record.
+ */
+export const OpenLibraryWorkResponseSchema = z.object({
+  description: z.union([z.string(), z.object({ value: z.string() })]).optional(),
+});
+
+export type OpenLibraryWorkResponse = z.infer<typeof OpenLibraryWorkResponseSchema>;
 
 /**
  * Raw IGDB `/games` response — only fields consumed by `igdb.provider.ts` are modeled.

@@ -21,13 +21,24 @@ describe('TmdbProvider', () => {
     vi.unstubAllGlobals();
   });
 
-  it('logs the call and the resolved metadata on success, without ever logging the API key', async () => {
-    const fetchMock = vi.fn().mockResolvedValue({
-      ok: true,
-      json: async () => ({
-        results: [{ title: 'Dune', release_date: '2021-10-22', overview: 'A desert planet epic.' }],
-      }),
-    });
+  it('logs the call and the resolved metadata (including director) on success, without ever logging the API key', async () => {
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          results: [{ id: 438631, title: 'Dune', release_date: '2021-10-22', overview: 'A desert planet epic.' }],
+        }),
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          crew: [
+            { job: 'Producer', name: 'Someone Else' },
+            { job: 'Director', name: 'Denis Villeneuve' },
+          ],
+        }),
+      });
     vi.stubGlobal('fetch', fetchMock);
 
     const provider = new TmdbProvider(API_KEY, 1000);
@@ -36,7 +47,33 @@ describe('TmdbProvider', () => {
     const result = await provider.search('dune', logger);
 
     expect(result?.title).toBe('Dune');
+    expect(result?.creator).toBe('Denis Villeneuve');
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    expect(fetchMock.mock.calls[1]?.[0]).toContain('/movie/438631/credits');
     expect(logger.info).toHaveBeenCalled();
+    expect(JSON.stringify(loggedValues(logger))).not.toContain(API_KEY);
+  });
+
+  it('returns title/year/description with a null creator when the credits call fails, without ever logging the API key', async () => {
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          results: [{ id: 438631, title: 'Dune', release_date: '2021-10-22', overview: 'A desert planet epic.' }],
+        }),
+      })
+      .mockResolvedValueOnce({ ok: false, status: 500 });
+    vi.stubGlobal('fetch', fetchMock);
+
+    const provider = new TmdbProvider(API_KEY, 1000);
+    const logger = buildLogger();
+
+    const result = await provider.search('dune', logger);
+
+    expect(result?.title).toBe('Dune');
+    expect(result?.creator).toBeNull();
+    expect(logger.warn).toHaveBeenCalledWith(expect.objectContaining({ status: 500 }), expect.any(String));
     expect(JSON.stringify(loggedValues(logger))).not.toContain(API_KEY);
   });
 
