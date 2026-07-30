@@ -1,5 +1,16 @@
 import { create } from 'zustand';
 
-type UIState = Record<string, never>;
+import type { Category } from '../types/media-item.types';
 
-export const useUIStore = create<UIState>(() => ({}));
+// 'ALL' is a synthetic value (not part of the closed Category enum) meaning "no filter applied".
+export type LibraryCategoryFilter = Category | 'ALL';
+
+interface UIState {
+  libraryCategoryFilter: LibraryCategoryFilter;
+  setLibraryCategoryFilter: (category: LibraryCategoryFilter) => void;
+}
+
+export const useUIStore = create<UIState>((set) => ({
+  libraryCategoryFilter: 'ALL',
+  setLibraryCategoryFilter: (category) => set({ libraryCategoryFilter: category }),
+}));

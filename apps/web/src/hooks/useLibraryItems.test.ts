@@ -4,6 +4,7 @@ import { describe, expect, it } from 'vitest';
 
 import { server } from '../../tests/msw/server';
 import { createQueryClientWrapper } from '../../tests/test-utils';
+import { useUIStore } from '../stores/ui.store';
 import { useLibraryItems } from './useLibraryItems';
 
 describe('useLibraryItems', () => {
@@ -18,6 +19,29 @@ describe('useLibraryItems', () => {
     expect(result.current.error).toBeNull();
     expect(result.current.data).toHaveLength(2);
     expect(result.current.data?.[0]?.id).toBe('3');
+  });
+
+  it('filters the returned list by the active library category filter', async () => {
+    useUIStore.setState({ libraryCategoryFilter: 'BOOK' });
+
+    const { Wrapper } = createQueryClientWrapper();
+    const { result } = renderHook(() => useLibraryItems(), { wrapper: Wrapper });
+
+    await waitFor(() => expect(result.current.isLoading).toBe(false));
+
+    expect(result.current.data).toHaveLength(1);
+    expect(result.current.data?.[0]?.category).toBe('BOOK');
+  });
+
+  it('returns the full list when the filter is "ALL"', async () => {
+    useUIStore.setState({ libraryCategoryFilter: 'ALL' });
+
+    const { Wrapper } = createQueryClientWrapper();
+    const { result } = renderHook(() => useLibraryItems(), { wrapper: Wrapper });
+
+    await waitFor(() => expect(result.current.isLoading).toBe(false));
+
+    expect(result.current.data).toHaveLength(2);
   });
 
   it('surfaces an error when the request fails', async () => {

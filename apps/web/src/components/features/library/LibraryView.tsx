@@ -2,13 +2,17 @@ import { useState } from 'react';
 
 import { useDeleteItem } from '../../../hooks/useDeleteItem';
 import { useLibraryItems } from '../../../hooks/useLibraryItems';
+import { CATEGORY_LABELS } from '../../../lib/constants';
+import { useUIStore } from '../../../stores/ui.store';
 import { ItemCard } from '../inbox/ItemCard';
+import { CategoryFilter } from './CategoryFilter';
 import { ItemDetailModal } from './ItemDetailModal';
 
 /** No inline triage/delete controls on the card itself — those live in the detail modal. */
 export function LibraryView() {
   const { data: items, isLoading, error } = useLibraryItems();
   const { deleteItem } = useDeleteItem();
+  const libraryCategoryFilter = useUIStore((state) => state.libraryCategoryFilter);
   const [selectedItemId, setSelectedItemId] = useState<string | null>(null);
 
   if (isLoading) {
@@ -29,9 +33,16 @@ export function LibraryView() {
 
   if (!items || items.length === 0) {
     return (
-      <p className="p-4 text-center text-sm text-gray-500">
-        Your library is empty. Organize items from the Inbox to see them here.
-      </p>
+      <>
+        <div className="p-4">
+          <CategoryFilter />
+        </div>
+        <p className="p-4 text-center text-sm text-gray-500">
+          {libraryCategoryFilter === 'ALL'
+            ? 'Your library is empty. Organize items from the Inbox to see them here.'
+            : `No ${CATEGORY_LABELS[libraryCategoryFilter]} items in your library yet.`}
+        </p>
+      </>
     );
   }
 
@@ -44,6 +55,9 @@ export function LibraryView() {
 
   return (
     <>
+      <div className="p-4 pb-0">
+        <CategoryFilter />
+      </div>
       <ul className="flex flex-col gap-3 p-4">
         {items.map((item) => (
           <li key={item.id}>

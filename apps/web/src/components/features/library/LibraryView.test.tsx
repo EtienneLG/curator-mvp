@@ -5,6 +5,7 @@ import { describe, expect, it } from 'vitest';
 
 import { server } from '../../../../tests/msw/server';
 import { createQueryClientWrapper } from '../../../../tests/test-utils';
+import { useUIStore } from '../../../stores/ui.store';
 import { LibraryView } from './LibraryView';
 
 describe('LibraryView', () => {
@@ -37,6 +38,30 @@ describe('LibraryView', () => {
     render(<LibraryView />, { wrapper: Wrapper });
 
     await waitFor(() => expect(screen.getByRole('alert')).toBeInTheDocument());
+  });
+
+  it('narrows the visible list when a category is selected', async () => {
+    const { Wrapper } = createQueryClientWrapper();
+    render(<LibraryView />, { wrapper: Wrapper });
+
+    await waitFor(() => expect(screen.getAllByRole('listitem')).toHaveLength(2));
+
+    await userEvent.selectOptions(screen.getByLabelText('Category'), 'BOOK');
+
+    await waitFor(() => expect(screen.getAllByRole('listitem')).toHaveLength(1));
+    expect(screen.getByText('Dune')).toBeInTheDocument();
+    expect(screen.queryByText('Example Movie')).not.toBeInTheDocument();
+  });
+
+  it('shows a category-specific empty state when no items match the filter', async () => {
+    useUIStore.setState({ libraryCategoryFilter: 'ARTICLE' });
+
+    const { Wrapper } = createQueryClientWrapper();
+    render(<LibraryView />, { wrapper: Wrapper });
+
+    await waitFor(() =>
+      expect(screen.getByText(/no article items in your library yet/i)).toBeInTheDocument(),
+    );
   });
 
   it('opens the item detail modal when a card is clicked', async () => {
