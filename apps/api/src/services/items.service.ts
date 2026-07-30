@@ -1,3 +1,4 @@
+import type { Logger } from '../lib/logger.js';
 import { NotFoundError } from '../lib/errors.js';
 import type { CaptureItemInput, ListItemsQuery, TriageItemInput } from '../schemas/item.schema.js';
 import type { ItemsRepository } from '../repositories/items.repository.js';
@@ -38,12 +39,12 @@ export class ItemsService {
 
   // Throws NotFoundError when `id` doesn't match any MediaItem; the suggestion lookup itself
   // never throws (see SuggestionsService).
-  async getSuggestions(id: string) {
+  async getSuggestions(id: string, logger: Logger) {
     const item = await this.itemsRepository.findById(id);
     if (!item) {
       throw new NotFoundError(`MediaItem not found: ${id}`);
     }
-    return this.suggestionsService.suggest(item.content);
+    return this.suggestionsService.suggest(item.content, logger);
   }
 
   // Throws NotFoundError when `id` doesn't match any MediaItem.

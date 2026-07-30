@@ -1,3 +1,4 @@
+import type { Logger } from '../../lib/logger.js';
 import { TmdbSearchResponseSchema } from '../../schemas/suggestion.schema.js';
 import type { ProviderMetadata } from '../../schemas/suggestion.schema.js';
 import type { SuggestionProvider } from './types.js';
@@ -19,38 +20,57 @@ export class TmdbProvider implements SuggestionProvider {
     private readonly timeoutMs: number,
   ) {}
 
-  async search(query: string): Promise<ProviderMetadata | null> {
-    return withTimeout(this.timeoutMs, async (signal) => {
-      const url = new URL(SEARCH_URL);
-      url.searchParams.set('query', query);
+  async search(query: string, logger: Logger): Promise<ProviderMetadata | null> {
+    logger.info({ provider: 'tmdb', query }, 'Calling TMDB search API');
 
-      const response = await fetch(url, {
-        headers: { Authorization: `Bearer ${this.apiKey}`, Accept: 'application/json' },
-        signal,
-      });
+    const result = await withTimeout(
+      this.timeoutMs,
+      async (signal) => {
+        const url = new URL(SEARCH_URL);
+        url.searchParams.set('query', query);
 
-      if (!response.ok) {
-        return null;
-      }
+        const response = await fetch(url, {
+          headers: { Authorization: `Bearer ${this.apiKey}`, Accept: 'application/json' },
+          signal,
+        });
 
-      // TMDB's response is untrusted external input — validate before reading.
-      const raw: unknown = await response.json();
-      const result = TmdbSearchResponseSchema.safeParse(raw);
-      if (!result.success) {
-        return null;
-      }
+        if (!response.ok) {
+          logger.warn({ provider: 'tmdb', status: response.status }, 'TMDB search API returned a non-OK response');
+          return null;
+        }
 
-      const [topResult] = result.data.results;
-      if (!topResult) {
-        return null;
-      }
+        // TMDB's response is untrusted external input — validate before reading.
+        const raw: unknown = await response.json();
+        const parsed = TmdbSearchResponseSchema.safeParse(raw);
+        if (!parsed.success) {
+          logger.warn({ provider: 'tmdb' }, 'TMDB search API response failed schema validation');
+          return null;
+        }
 
-      return {
-        title: topResult.title,
-        year: parseYear(topResult.release_date),
-        creator: null, // TMDB search results don't include director/cast — out of scope for a search hit.
-        description: topResult.overview ?? null,
-      };
-    });
+        const [topResult] = parsed.data.results;
+        if (!topResult) {
+          logger.info({ provider: 'tmdb', query }, 'TMDB search API returned no results');
+          return null;
+        }
+
+        return {
+          title: topResult.title,
+          year: parseYear(topResult.release_date),
+          creator: null, // TMDB search results don't include director/cast — out of scope for a search hit.
+          description: topResult.overview ?? null,
+        };
+      },
+      logger,
+      { provider: 'tmdb', query },
+    );
+
+    if (result) {
+      logger.info(
+        { provider: 'tmdb', title: result.title, year: result.year, descriptionLength: result.description?.length ?? 0 },
+        'TMDB search API returned metadata',
+      );
+    }
+
+    return result;
   }
 }

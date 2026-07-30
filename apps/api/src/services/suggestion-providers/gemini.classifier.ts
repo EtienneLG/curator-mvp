@@ -1,11 +1,10 @@
 import { GoogleGenAI, Type } from '@google/genai';
 
+import type { Logger } from '../../lib/logger.js';
 import { GeminiClassificationSchema, type GeminiClassification } from '../../schemas/suggestion.schema.js';
-import { withTimeout } from './types.js';
+import { truncateForLog, withTimeout } from './types.js';
 
-// gemini-2.5-flash is the fastest/cheapest current model — appropriate for a classification-only
-// task (category + search query), not open-ended generation.
-const MODEL = 'gemini-2.5-flash';
+const MODEL = 'gemini-3.1-flash-lite';
 
 // Structured-output schema (Gemini's OpenAPI-subset `Schema` type, not Zod) — constrains the
 // model to return exactly `{ category, searchQuery }` as `application/json`. `category` is
@@ -29,12 +28,16 @@ const RESPONSE_SCHEMA = {
   required: ['category', 'searchQuery'],
 };
 
-const SYSTEM_INSTRUCTION =
-  'You classify a short piece of free-form text captured by a personal media-tracking app. ' +
-  'Decide which single category it most likely refers to (MOVIE, BOOK, GAME, or ARTICLE), and ' +
-  'produce a concise search query suitable for looking it up in a category-specific database ' +
-  '(TMDB for movies, Open Library for books, IGDB for games). Do not invent a year, author, ' +
-  'director, developer, or description — only classify and produce a search query.';
+const SYSTEM_INSTRUCTION = `
+You are a precise data extraction assistant for a media-tracking app. Analyze the user's short, free-form thought and extract the media type and the exact title.
+
+### Categories
+Select exactly ONE: MOVIE, BOOK, GAME, ARTICLE, or UNKNOWN.
+
+### Extraction Rules
+1. Title Extraction: Extract the title strictly WORD-FOR-WORD as it appears in the text. 
+2. No Guessing/Completion: Do not fix typos, do not add missing subtitles, and do not autocomplete the title. If the user writes "harry potter 1", extract "harry potter 1", NOT "Harry Potter and the Sorcerer's Stone".
+`;
 
 // Used strictly as a classifier: given raw `content`, returns a category plus a search query
 // for the matching provider. Best-effort — any failure or malformed output resolves to `null`.
@@ -48,34 +51,55 @@ export class GeminiClassifier {
     this.client = new GoogleGenAI({ apiKey });
   }
 
-  async classify(content: string): Promise<GeminiClassification | null> {
-    return withTimeout(this.timeoutMs, async (signal) => {
-      const response = await this.client.models.generateContent({
-        model: MODEL,
-        contents: content,
-        config: {
-          systemInstruction: SYSTEM_INSTRUCTION,
-          responseMimeType: 'application/json',
-          responseSchema: RESPONSE_SCHEMA,
-          // Deterministic output — this is closed-set classification (pick 1 of 4 categories +
-          // a short search query), not creative generation, so the same `content` should
-          // classify the same way every time.
-          temperature: 0,
-          // No tools (search grounding/code execution/function calling) — Gemini must classify from `content` alone.
-          tools: [],
-          abortSignal: signal,
-        },
-      });
+  async classify(content: string, logger: Logger): Promise<GeminiClassification | null> {
+    logger.info({ stage: 'gemini-classify', content: truncateForLog(content) }, 'Calling Gemini classifier');
 
-      const text = response.text;
-      if (!text) {
-        return null;
-      }
+    const result = await withTimeout(
+      this.timeoutMs,
+      async (signal) => {
+        const response = await this.client.models.generateContent({
+          model: MODEL,
+          contents: content,
+          config: {
+            systemInstruction: SYSTEM_INSTRUCTION,
+            responseMimeType: 'application/json',
+            responseSchema: RESPONSE_SCHEMA,
+            // Deterministic output — this is closed-set classification (pick 1 of 4 categories +
+            // a short search query), not creative generation, so the same `content` should
+            // classify the same way every time.
+            temperature: 0,
+            // No tools (search grounding/code execution/function calling) — Gemini must classify from `content` alone.
+            tools: [],
+            abortSignal: signal,
+          },
+        });
 
-      // Gemini's JSON output is untrusted external input — validate with Zod before trusting it.
-      const parsed: unknown = JSON.parse(text);
-      const result = GeminiClassificationSchema.safeParse(parsed);
-      return result.success ? result.data : null;
-    });
+        const text = response.text;
+        if (!text) {
+          logger.warn({ stage: 'gemini-classify' }, 'Gemini classifier returned an empty response');
+          return null;
+        }
+
+        // Gemini's JSON output is untrusted external input — validate with Zod before trusting it.
+        const parsed: unknown = JSON.parse(text);
+        const result = GeminiClassificationSchema.safeParse(parsed);
+        if (!result.success) {
+          logger.warn({ stage: 'gemini-classify' }, 'Gemini classifier response failed schema validation');
+          return null;
+        }
+        return result.data;
+      },
+      logger,
+      { stage: 'gemini-classify' },
+    );
+
+    if (result) {
+      logger.info(
+        { stage: 'gemini-classify', category: result.category, searchQuery: result.searchQuery },
+        'Gemini classifier resolved a category and search query',
+      );
+    }
+
+    return result;
   }
 }

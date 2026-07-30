@@ -1,9 +1,14 @@
 import { describe, expect, it, vi } from 'vitest';
 
 import { NotFoundError } from '../../src/lib/errors.js';
+import type { Logger } from '../../src/lib/logger.js';
 import type { ItemsRepository } from '../../src/repositories/items.repository.js';
 import { ItemsService } from '../../src/services/items.service.js';
 import type { SuggestionsService } from '../../src/services/suggestions.service.js';
+
+function buildLogger() {
+  return { info: vi.fn(), warn: vi.fn(), error: vi.fn() } as unknown as Logger;
+}
 
 function buildSuggestionsService() {
   const suggest = vi.fn();
@@ -179,11 +184,12 @@ describe('ItemsService', () => {
       description: 'A short synopsis',
     });
     const service = new ItemsService(asItemsRepository, asSuggestionsService);
+    const logger = buildLogger();
 
-    const suggestion = await service.getSuggestions('item-1');
+    const suggestion = await service.getSuggestions('item-1', logger);
 
     expect(findById).toHaveBeenCalledWith('item-1');
-    expect(suggest).toHaveBeenCalledWith('note');
+    expect(suggest).toHaveBeenCalledWith('note', logger);
     expect(suggestion.category).toBe('MOVIE');
   });
 
@@ -193,6 +199,6 @@ describe('ItemsService', () => {
     const { asSuggestionsService } = buildSuggestionsService();
     const service = new ItemsService(asItemsRepository, asSuggestionsService);
 
-    await expect(service.getSuggestions('missing-id')).rejects.toThrow(NotFoundError);
+    await expect(service.getSuggestions('missing-id', buildLogger())).rejects.toThrow(NotFoundError);
   });
 });

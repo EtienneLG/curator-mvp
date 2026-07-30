@@ -29,7 +29,7 @@ export function createGetItemSuggestions(itemsService: ItemsService) {
     request: FastifyRequest<{ Params: ItemParams }>,
     reply: FastifyReply,
   ) {
-    const suggestion = await itemsService.getSuggestions(request.params.id);
+    const suggestion = await itemsService.getSuggestions(request.params.id, request.log);
     reply.status(200).send(suggestion);
   };
 }
